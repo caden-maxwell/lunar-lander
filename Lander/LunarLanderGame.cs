@@ -1,14 +1,18 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Lander.Input;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Lander;
 
 public class LunarLanderGame : Game
 {
-    private GraphicsDeviceManager m_graphics;
-    private SpriteBatch m_spriteBatch;
+    private readonly GraphicsDeviceManager m_graphics;
+    private IGameState m_prevState;
+    private IGameState m_currentState;
+    private Dictionary<GameStateEnum, IGameState> m_states;
+    private KeyboardInput m_keyboardInput;
 
     public LunarLanderGame()
     {
@@ -19,25 +23,64 @@ public class LunarLanderGame : Game
 
     protected override void Initialize()
     {
-        MyComponent myComponent = new MyComponent(this);
-        this.Components.Add(myComponent);
+        m_graphics.PreferredBackBufferWidth = 1920;
+        m_graphics.PreferredBackBufferHeight = 1080;
+
+        m_graphics.ApplyChanges();
+
+        m_keyboardInput = new();
+
+        m_states = new Dictionary<GameStateEnum, IGameState>
+        {
+            { GameStateEnum.MainMenu, new MainMenuView() },
+            { GameStateEnum.GamePlay, new GamePlayView() },
+            { GameStateEnum.HighScores, new HighScoresView() },
+            { GameStateEnum.Help, new HelpView() },
+            { GameStateEnum.About, new AboutView() },
+            { GameStateEnum.Config, new ConfigView() }
+        };
+
+        // Init each game state
+        foreach (var item in m_states)
+            item.Value.Initialize(this.GraphicsDevice, m_graphics);
+
+        // Start with main menu
+        m_currentState = m_states[GameStateEnum.MainMenu];
+        m_prevState = m_currentState;
+        m_states[GameStateEnum.MainMenu].RegisterKeys(m_keyboardInput);
 
         base.Initialize();
     }
 
     protected override void LoadContent()
     {
-        m_spriteBatch = new SpriteBatch(GraphicsDevice);
-
-        // TODO: use this.Content to load your game content here
+        foreach (var item in m_states)
+            item.Value.LoadContent(this.Content);
     }
 
     protected override void Update(GameTime gameTime)
     {
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-            Exit();
+        m_keyboardInput.Update(gameTime);
+        GameStateEnum nextStateEnum = m_currentState.ProcessInput(gameTime);
 
-        // TODO: Add your update logic here
+        // Special case for exiting the game
+        if (nextStateEnum == GameStateEnum.Exit)
+        {
+            Exit();
+        }
+        else
+        {
+            m_currentState.Update(gameTime);
+            m_prevState = m_currentState;
+            m_currentState = m_states[nextStateEnum];
+        }
+
+        if (m_currentState.State != m_prevState.State)
+        {
+            m_keyboardInput.UnregisterAll();
+            m_currentState.RegisterKeys(m_keyboardInput);
+            Debug.WriteLine($"{m_currentState.State}: {m_keyboardInput}");
+        }
 
         base.Update(gameTime);
     }
@@ -46,7 +89,7 @@ public class LunarLanderGame : Game
     {
         GraphicsDevice.Clear(Color.CornflowerBlue);
 
-        // TODO: Add your drawing code here
+        m_currentState.Render(gameTime);
 
         base.Draw(gameTime);
     }
