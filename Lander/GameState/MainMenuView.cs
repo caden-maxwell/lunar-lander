@@ -18,9 +18,8 @@ public class MainMenuView : GameStateView
     {
         NewGame,
         HighScores,
-        Help,
         About,
-        Configs,
+        Settings,
         Quit,
         N
     }
@@ -54,9 +53,8 @@ public class MainMenuView : GameStateView
             200,
             m_currentSelection == MenuState.NewGame ? Color.Yellow : Color.Blue);
         bottom = DrawMenuItem(m_currentSelection == MenuState.HighScores ? m_fontMenuSelect : m_fontMenu, "High Scores", bottom, m_currentSelection == MenuState.HighScores ? Color.Yellow : Color.Blue);
-        bottom = DrawMenuItem(m_currentSelection == MenuState.Help ? m_fontMenuSelect : m_fontMenu, "Help", bottom, m_currentSelection == MenuState.Help ? Color.Yellow : Color.Blue);
         bottom = DrawMenuItem(m_currentSelection == MenuState.About ? m_fontMenuSelect : m_fontMenu, "About", bottom, m_currentSelection == MenuState.About ? Color.Yellow : Color.Blue);
-        bottom = DrawMenuItem(m_currentSelection == MenuState.Configs ? m_fontMenuSelect : m_fontMenu, "Configs", bottom, m_currentSelection == MenuState.Configs ? Color.Yellow : Color.Blue);
+        bottom = DrawMenuItem(m_currentSelection == MenuState.Settings ? m_fontMenuSelect : m_fontMenu, "Settings", bottom, m_currentSelection == MenuState.Settings ? Color.Yellow : Color.Blue);
         DrawMenuItem(m_currentSelection == MenuState.Quit ? m_fontMenuSelect : m_fontMenu, "Quit", bottom, m_currentSelection == MenuState.Quit ? Color.Yellow : Color.Blue);
 
         m_spriteBatch.End();
@@ -92,17 +90,16 @@ public class MainMenuView : GameStateView
     {
         switch (m_currentSelection)
         {
-            case MenuState.NewGame: NextState = GameStateEnum.GamePlay; break;
-            case MenuState.HighScores: NextState = GameStateEnum.HighScores; break;
-            case MenuState.Help: NextState = GameStateEnum.Help; break;
-            case MenuState.About: NextState = GameStateEnum.About; break;
-            case MenuState.Configs: NextState = GameStateEnum.Config; break;
-            case MenuState.Quit: NextState = GameStateEnum.Exit; break;
+            case MenuState.NewGame: ChangeState(GameStateEnum.GamePlay); break;
+            case MenuState.HighScores: ChangeState(GameStateEnum.HighScores); break;
+            case MenuState.About: ChangeState(GameStateEnum.About); break;
+            case MenuState.Settings: ChangeState(GameStateEnum.Settings); break;
+            case MenuState.Quit: ChangeState(GameStateEnum.Exit); break;
         }
     }
 
     public override void EscPressed(GameTime gameTime, float value)
     {
-        NextState = GameStateEnum.Exit;
+        ChangeState(GameStateEnum.Exit);
     }
 }

@@ -1,17 +1,18 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Lander.Input;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
 namespace Lander;
 
-public class HelpView : GameStateView
+public class SettingsView : GameStateView
 {
     private SpriteFont m_font;
-    private const string MESSAGE = "This is how to play the game";
+    private const string MESSAGE = "Change keybinds here";
 
-    public override GameStateEnum State { get; } = GameStateEnum.Help;
-    public override GameStateEnum NextState { get; set; } = GameStateEnum.Help;
+    public override GameStateEnum State { get; } = GameStateEnum.Settings;
+    public override GameStateEnum NextState { get; set; } = GameStateEnum.Settings;
 
     public override void LoadContent(ContentManager contentManager)
     {
@@ -29,7 +30,5 @@ public class HelpView : GameStateView
         m_spriteBatch.End();
     }
 
-    public override void Update(GameTime gameTime)
-    {
-    }
+    public override void Update(GameTime gameTime) { }
 }
