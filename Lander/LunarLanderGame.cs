@@ -35,9 +35,8 @@ public class LunarLanderGame : Game
             { GameStateEnum.MainMenu, new MainMenuView() },
             { GameStateEnum.GamePlay, new GamePlayView() },
             { GameStateEnum.HighScores, new HighScoresView() },
-            { GameStateEnum.Help, new HelpView() },
             { GameStateEnum.About, new AboutView() },
-            { GameStateEnum.Config, new ConfigView() }
+            { GameStateEnum.Settings, new SettingsView() }
         };
 
         // Init each game state
@@ -58,16 +57,19 @@ public class LunarLanderGame : Game
             item.Value.LoadContent(this.Content);
     }
 
-    protected override void Update(GameTime gameTime)
+    protected GameStateEnum ProcessInput(GameTime gameTime)
     {
         m_keyboardInput.Update(gameTime);
-        GameStateEnum nextStateEnum = m_currentState.ProcessInput(gameTime);
+        return m_currentState.ProcessInput(gameTime);
+    }
+
+    protected override void Update(GameTime gameTime)
+    {
+        GameStateEnum nextStateEnum = ProcessInput(gameTime);
 
         // Special case for exiting the game
         if (nextStateEnum == GameStateEnum.Exit)
-        {
             Exit();
-        }
         else
         {
             m_currentState.Update(gameTime);

@@ -7,6 +7,6 @@ public enum GameStateEnum
     HighScores,
     Help,
     About,
-    Config,
+    Settings,
     Exit
 }

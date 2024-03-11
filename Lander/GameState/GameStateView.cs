@@ -10,6 +10,7 @@ public abstract class GameStateView : IGameState
 {
     protected GraphicsDeviceManager m_graphics;
     protected SpriteBatch m_spriteBatch;
+    protected bool m_stateChanged = false;
 
     public abstract GameStateEnum State { get; }
     public abstract GameStateEnum NextState { get; set; }
@@ -29,11 +30,11 @@ public abstract class GameStateView : IGameState
 
     public virtual GameStateEnum ProcessInput(GameTime gameTime)
     {
-        if (NextState == State) return State;
-        GameStateEnum nextState = NextState;
-        NextState = State;
+        if (!m_stateChanged)
+            return State;
 
-        return nextState;
+        m_stateChanged = false;
+        return NextState;
     }
 
     public abstract void Render(GameTime gameTime);
@@ -42,6 +43,12 @@ public abstract class GameStateView : IGameState
 
     public virtual void EscPressed(GameTime gameTime, float value)
     {
-        NextState = GameStateEnum.MainMenu;
+        ChangeState(GameStateEnum.MainMenu);
+    }
+
+    protected void ChangeState(GameStateEnum nextState)
+    {
+        NextState = nextState;
+        m_stateChanged = true;
     }
 }
