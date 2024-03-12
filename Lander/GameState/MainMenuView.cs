@@ -1,10 +1,10 @@
-﻿using Lander.Input;
+﻿using LunarLander.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
-namespace Lander;
+namespace LunarLander;
 
 public class MainMenuView : GameStateView
 {
@@ -26,12 +26,12 @@ public class MainMenuView : GameStateView
 
     private MenuState m_currentSelection = MenuState.NewGame;
 
-    public override void RegisterKeys(KeyboardInput keyboardInput)
+    public override void RegisterKeys(IInputDevice inputDevice)
     {
-        keyboardInput.RegisterCommand(Keys.Down, true, new CommandDelegate(SelectBelow));
-        keyboardInput.RegisterCommand(Keys.Up, true, new CommandDelegate(SelectAbove));
-        keyboardInput.RegisterCommand(Keys.Enter, true, new CommandDelegate(EnterPressed));
-        keyboardInput.RegisterCommand(Keys.Escape, true, new CommandDelegate(EscPressed));
+        inputDevice.RegisterCommand(Keys.Down, true, new CommandDelegate(SelectBelow));
+        inputDevice.RegisterCommand(Keys.Up, true, new CommandDelegate(SelectAbove));
+        inputDevice.RegisterCommand(Keys.Enter, true, new CommandDelegate(EnterPressed));
+        inputDevice.RegisterCommand(Keys.Escape, true, new CommandDelegate(EscPressed));
     }
 
     public override void Reload() { }

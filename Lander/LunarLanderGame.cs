@@ -1,10 +1,11 @@
 ﻿using Lander.Input;
+using LunarLander.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Lander;
+namespace LunarLander;
 
 public class LunarLanderGame : Game
 {
@@ -12,7 +13,8 @@ public class LunarLanderGame : Game
     private IGameState m_prevState;
     private IGameState m_currentState;
     private Dictionary<GameStateEnum, IGameState> m_states;
-    private KeyboardInput m_keyboardInput;
+    private IInputDevice m_inputDevice;
+    private InputMapper m_inputMapper = new();
     private const GameStateEnum m_startState = GameStateEnum.GamePlay;
 
     public LunarLanderGame()
@@ -29,15 +31,15 @@ public class LunarLanderGame : Game
 
         m_graphics.ApplyChanges();
 
-        m_keyboardInput = new();
-
+        m_inputDevice = new KeyboardInput(); // This line could ideally be any input
+        
         m_states = new Dictionary<GameStateEnum, IGameState>
         {
             { GameStateEnum.MainMenu, new MainMenuView() },
-            { GameStateEnum.GamePlay, new GamePlayView() },
+            { GameStateEnum.GamePlay, new GamePlayView(m_inputMapper) },
             { GameStateEnum.HighScores, new HighScoresView() },
             { GameStateEnum.Credits, new CreditsView() },
-            { GameStateEnum.Settings, new SettingsView() }
+            { GameStateEnum.Settings, new SettingsView(m_inputMapper) }
         };
 
         // Init each game state
@@ -47,7 +49,7 @@ public class LunarLanderGame : Game
         // Start with game play state for debugging purposes
         m_currentState = m_states[m_startState];
         m_prevState = m_currentState;
-        m_currentState.RegisterKeys(m_keyboardInput);
+        m_currentState.RegisterKeys(m_inputDevice);
 
         base.Initialize();
     }
@@ -60,7 +62,7 @@ public class LunarLanderGame : Game
 
     protected GameStateEnum ProcessInput(GameTime gameTime)
     {
-        m_keyboardInput.Update(gameTime);
+        m_inputDevice.Update(gameTime);
         return m_currentState.ProcessInput(gameTime);
     }
 
@@ -80,11 +82,11 @@ public class LunarLanderGame : Game
 
         if (m_currentState.State != m_prevState.State)
         {
-            m_keyboardInput.UnregisterAll();
-            m_currentState.RegisterKeys(m_keyboardInput);
+            m_inputDevice.UnregisterAll();
+            m_currentState.RegisterKeys(m_inputDevice);
             m_currentState.Reload();
 
-            Debug.WriteLine($"{m_currentState.State}: {m_keyboardInput}");
+            Debug.WriteLine($"{m_currentState.State}: {m_inputDevice}");
         }
 
         base.Update(gameTime);

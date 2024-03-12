@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
-namespace Lander.Input;
+namespace LunarLander.Input;
 
 public delegate void CommandDelegate(GameTime gameTime, float value);
 public delegate void CommandDelegatePosition(GameTime GameTime, int x, int y);
@@ -11,4 +12,6 @@ public delegate void CommandDelegatePosition(GameTime GameTime, int x, int y);
 public interface IInputDevice
 {
     void Update(GameTime gameTime);
+    void RegisterCommand(Keys key, bool keyPressOnly, CommandDelegate callback);
+    void UnregisterAll();
 }

@@ -1,15 +1,22 @@
 ﻿using Lander.Input;
+using LunarLander.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
-namespace Lander;
+namespace LunarLander;
 
 public class SettingsView : GameStateView
 {
     private SpriteFont m_font;
     private const string MESSAGE = "Change keybinds here";
+    private InputMapper m_inputMapper;
+
+    public SettingsView(InputMapper inputMapper)
+    {
+        m_inputMapper = inputMapper;
+    }
 
     public override GameStateEnum State { get; } = GameStateEnum.Settings;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.Settings;

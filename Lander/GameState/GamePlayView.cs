@@ -1,4 +1,5 @@
 ﻿using Lander.Input;
+using LunarLander.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -7,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Lander;
+namespace LunarLander;
 
 public class GamePlayView : GameStateView
 {
@@ -19,10 +20,10 @@ public class GamePlayView : GameStateView
     private int[] m_indexTriStrip;
     private List<Line> m_lines = new();
 
-    private readonly float m_srf = 0.5f; // Surface roughness factor
-    private readonly float m_terrainDetail = 4; // X distance between terrain vertices - higher is less detailed
+    private readonly float m_srf = 0.65f; // Surface roughness factor - higher is more rough
+    private readonly float m_terrainDetail = 5; // X distance between terrain vertices - higher is less detailed
+    private readonly float m_pctFromEdge = 0.15f; // Percent of screen that bounds are away from window edges
     private float m_terrainYLevel; // Starting y-level for terrain
-    private readonly float m_pctFromEdge = 0.15f;
     private struct Bounds
     {
         public float Top;
@@ -30,11 +31,10 @@ public class GamePlayView : GameStateView
         public float Left;
         public float Right;
     };
-    private Bounds m_bounds; // Defines bounds for safety zones
+    private Bounds m_bounds; // Defines bounds for safety zones and top of terrain
 
     private int m_level = 1;
     private int m_numLandingZones = 2;
-
     private enum GamePlayState
     {
         Transition,
@@ -43,10 +43,17 @@ public class GamePlayView : GameStateView
         End
     }
 
-    private RandomGen m_rand = new();
+    private readonly RandomGen m_rand = new();
+
+    private readonly InputMapper m_inputMapper;
 
     public override GameStateEnum State { get; } = GameStateEnum.GamePlay;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.GamePlay;
+
+    public GamePlayView(InputMapper inputMapper)
+    {
+        m_inputMapper = inputMapper;
+    }
 
     public override void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics)
     {
@@ -87,6 +94,27 @@ public class GamePlayView : GameStateView
     public override void Reload()
     {
         BuildTerrain();
+    }
+
+    public override void RegisterKeys(IInputDevice inputDevice)
+    {
+        base.RegisterKeys(inputDevice);
+
+        inputDevice.RegisterCommand(
+            m_inputMapper.KeyboardMappings[ActionEnum.Thrust],
+            false,
+            new CommandDelegate(Thrust)
+        );
+        inputDevice.RegisterCommand(
+            m_inputMapper.KeyboardMappings[ActionEnum.RotateClockwise],
+            false,
+            new CommandDelegate((gameTime, value) => Rotate(gameTime, value, true))
+        );
+        inputDevice.RegisterCommand(
+            m_inputMapper.KeyboardMappings[ActionEnum.RotateCounterClockwise],
+            false,
+            new CommandDelegate((gameTime, value) => Rotate(gameTime, value, false))
+        );
     }
 
     private void BuildTerrain()
@@ -229,6 +257,18 @@ public class GamePlayView : GameStateView
         }
 
         m_spriteBatch.End();
+    }
+
+    private void Thrust(GameTime gameTime, float value)
+    {
+        Debug.WriteLine("Thrusting!!!");
+    }
+    private void Rotate(GameTime gameTime, float value, bool clockwise)
+    {
+        if (clockwise)
+            Debug.WriteLine("Rotating Clockwise!!!");
+        else
+            Debug.WriteLine("Rotating Counterclockswise!!!");
     }
 }
 

@@ -1,7 +1,7 @@
 ﻿
 using System;
 
-namespace Lander;
+namespace LunarLander;
 
 public class RandomGen
 {

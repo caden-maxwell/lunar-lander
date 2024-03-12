@@ -1,19 +1,20 @@
 ﻿using Lander.Input;
+using LunarLander.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
-namespace Lander;
+namespace LunarLander;
 
 public abstract class GameStateView : IGameState
 {
     protected GraphicsDeviceManager m_graphics;
     protected SpriteBatch m_spriteBatch;
-    protected bool m_stateChanged = false;
 
     public abstract GameStateEnum State { get; }
     public abstract GameStateEnum NextState { get; set; }
+    protected bool m_stateChanged = false;
 
     public virtual void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics)
     {
@@ -21,9 +22,9 @@ public abstract class GameStateView : IGameState
         m_spriteBatch = new(graphicsDevice);
     }
 
-    public virtual void RegisterKeys(KeyboardInput keyboardInput)
+    public virtual void RegisterKeys(IInputDevice inputDevice)
     {
-        keyboardInput.RegisterCommand(Keys.Escape, true, new CommandDelegate(EscPressed));
+        inputDevice.RegisterCommand(Keys.Escape, true, new CommandDelegate(EscPressed));
     }
 
     public abstract void Reload();
