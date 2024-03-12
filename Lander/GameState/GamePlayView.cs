@@ -91,11 +91,12 @@ public class GamePlayView : GameStateView
 
     private void BuildTerrain()
     {
-        double randTerrainDisp = 50 * m_rand.NextGaussian(0, 1);
-        m_terrainYLevel = (int)(m_graphics.PreferredBackBufferHeight * 0.66f + randTerrainDisp); // Start 2/3 the way down
+        // Have terrain start 2/3 the way down, varying by ~10% of screen height typically
+        double randTerrainDisp = m_graphics.PreferredBackBufferHeight * 0.1f * m_rand.NextGaussian(0, 1);
+        m_terrainYLevel = (int)(m_graphics.PreferredBackBufferHeight * 0.66f + randTerrainDisp);
 
         float boundsWidth = m_bounds.Right - m_bounds.Left;
-        float landingZoneSize = 75;
+        float landingZoneSize = m_graphics.PreferredBackBufferWidth * 0.05f; // Landing Zones only 5% of total width
         List<Line> zones = new();
         Vector2 prevEnd = new(0, m_terrainYLevel);
         for (int i = 0; i < m_numLandingZones; i++)
@@ -123,11 +124,11 @@ public class GamePlayView : GameStateView
         zones.Add(lastZone);
 
         m_lines.Clear();
-        bool isLandingZone = false;
+        bool isLandingZone = false; // Alternate between terrain and landing zones
         for (int i = 0; i < zones.Count; i++)
         {
             Line currentZone = zones[i];
-            if (isLandingZone)
+            if (isLandingZone) // Dont alter landing zones
             {
                 m_lines.Add(currentZone);
                 isLandingZone = false;
@@ -135,7 +136,6 @@ public class GamePlayView : GameStateView
             }
 
             RandMidpointDisplacement(currentZone, m_lines, m_rand);
-
             isLandingZone = true;
         }
 
