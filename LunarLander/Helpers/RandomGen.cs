@@ -1,7 +1,7 @@
 ﻿
 using System;
 
-namespace LunarLander;
+namespace LunarLander.Helpers;
 
 public class RandomGen
 {
@@ -48,10 +48,10 @@ public class RandomGen
         {
             x1 = 2 * NextDouble() - 1;
             x2 = 2 * NextDouble() - 1;
-            z = (x1 * x1) + (x2 * x2);
+            z = x1 * x1 + x2 * x2;
         } while (z >= 1);
 
-        z = Math.Sqrt((-2 * Math.Log(z)) / z);
+        z = Math.Sqrt(-2 * Math.Log(z) / z);
         y1 = x1 * z;
         y2 = x2 * z;
 

@@ -1,5 +1,4 @@
-﻿using Lander.Input;
-using LunarLander.Input;
+﻿using LunarLander.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
