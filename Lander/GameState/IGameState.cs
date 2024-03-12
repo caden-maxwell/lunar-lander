@@ -8,7 +8,9 @@ namespace Lander;
 public interface IGameState
 {
     GameStateEnum State { get; }
+    GameStateEnum NextState { get; set; }
     void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics);
+    void Reload();
     void LoadContent(ContentManager contentManager);
     GameStateEnum ProcessInput(GameTime gameTime);
     void Update(GameTime gameTime);

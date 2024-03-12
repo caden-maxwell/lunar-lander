@@ -14,6 +14,8 @@ public class AboutView : GameStateView
     public override GameStateEnum State { get; } = GameStateEnum.About;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.About;
 
+    public override void Reload() { }
+
     public override void LoadContent(ContentManager contentManager)
     {
         m_font = contentManager.Load<SpriteFont>("Fonts/menu");

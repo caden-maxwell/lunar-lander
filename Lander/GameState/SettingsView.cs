@@ -19,6 +19,8 @@ public class SettingsView : GameStateView
         m_font = contentManager.Load<SpriteFont>("Fonts/menu");
     }
 
+    public override void Reload() { }
+
     public override void Render(GameTime gameTime)
     {
         m_spriteBatch.Begin();
