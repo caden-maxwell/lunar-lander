@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34622.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lander", "Lander\Lander.csproj", "{E9590FA3-D99B-4664-8EE4-CB3A74D56485}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LunarLander", "LunarLander\LunarLander.csproj", "{E9590FA3-D99B-4664-8EE4-CB3A74D56485}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

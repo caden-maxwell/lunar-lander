@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using System;
 
-namespace Lander.Input;
+namespace LunarLander.Input;
 
 public enum ActionEnum
 {
@@ -24,7 +24,8 @@ public class InputMapper
 
     private void SetDefaultMappings()
     {
-        KeyboardMappings.Add(ActionEnum.Thrust, Keys.W);
+        // TODO: Get keys from persistent storage
+        KeyboardMappings.Add(ActionEnum.Thrust, Keys.Space);
         KeyboardMappings.Add(ActionEnum.RotateCounterClockwise, Keys.A);
         KeyboardMappings.Add(ActionEnum.RotateClockwise, Keys.D);
     }
