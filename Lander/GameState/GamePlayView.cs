@@ -19,10 +19,10 @@ public class GamePlayView : GameStateView
     private int[] m_indexTriStrip;
     private List<Line> m_lines = new();
 
-    private float m_srf = 0.6f; // Surface roughness factor
-    private float m_terrainDetail = 8; // X distance between terrain vertices - higher is less detailed
+    private readonly float m_srf = 0.5f; // Surface roughness factor
+    private readonly float m_terrainDetail = 4; // X distance between terrain vertices - higher is less detailed
     private float m_terrainYLevel; // Starting y-level for terrain
-    private float m_pctFromEdge = 0.15f;
+    private readonly float m_pctFromEdge = 0.15f;
     private struct Bounds
     {
         public float Top;
@@ -34,6 +34,7 @@ public class GamePlayView : GameStateView
 
     private int m_level = 1;
     private int m_numLandingZones = 2;
+
     private enum GamePlayState
     {
         Transition,
@@ -41,6 +42,8 @@ public class GamePlayView : GameStateView
         Paused,
         End
     }
+
+    private RandomGen m_rand = new();
 
     public override GameStateEnum State { get; } = GameStateEnum.GamePlay;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.GamePlay;
@@ -70,7 +73,6 @@ public class GamePlayView : GameStateView
             ),
         };
 
-        m_terrainYLevel = (int)(m_graphics.PreferredBackBufferHeight * 0.5f);
         m_bounds = new Bounds()
         {
             Top = (int)(m_graphics.PreferredBackBufferHeight * m_pctFromEdge),
@@ -89,9 +91,11 @@ public class GamePlayView : GameStateView
 
     private void BuildTerrain()
     {
-        RandomGen rand = new();
+        double randTerrainDisp = 50 * m_rand.NextGaussian(0, 1);
+        m_terrainYLevel = (int)(m_graphics.PreferredBackBufferHeight * 0.66f + randTerrainDisp); // Start 2/3 the way down
+
         float boundsWidth = m_bounds.Right - m_bounds.Left;
-        float landingZoneSize = 100;
+        float landingZoneSize = 75;
         List<Line> zones = new();
         Vector2 prevEnd = new(0, m_terrainYLevel);
         for (int i = 0; i < m_numLandingZones; i++)
@@ -102,8 +106,8 @@ public class GamePlayView : GameStateView
 
             // Get random starting point somewhere in its column
             Vector2 landingZoneStart = new(
-                rand.NextRange((int)leftBound, (int)(rightBound - landingZoneSize)),
-                rand.NextRange((int)m_bounds.Top, (int)m_bounds.Bottom)
+                m_rand.NextRange((int)leftBound, (int)(rightBound - landingZoneSize)),
+                m_rand.NextRange((int)m_bounds.Top, (int)m_bounds.Bottom)
             );
             Vector2 landingZoneEnd = landingZoneStart + new Vector2(landingZoneSize, 0);
 
@@ -130,7 +134,7 @@ public class GamePlayView : GameStateView
                 continue;
             }
 
-            RandMidpointDisplacement(currentZone, m_lines, rand);
+            RandMidpointDisplacement(currentZone, m_lines, m_rand);
 
             isLandingZone = true;
         }
@@ -202,9 +206,7 @@ public class GamePlayView : GameStateView
         m_font = contentManager.Load<SpriteFont>("Fonts/menu");
     }
 
-    public override void Update(GameTime gameTime)
-    {
-    }
+    public override void Update(GameTime gameTime) { }
 
     public override void Render(GameTime gameTime)
     {
