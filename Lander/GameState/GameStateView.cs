@@ -26,6 +26,8 @@ public abstract class GameStateView : IGameState
         keyboardInput.RegisterCommand(Keys.Escape, true, new CommandDelegate(EscPressed));
     }
 
+    public abstract void Reload();
+
     public abstract void LoadContent(ContentManager contentManager);
 
     public virtual GameStateEnum ProcessInput(GameTime gameTime)
@@ -36,10 +38,9 @@ public abstract class GameStateView : IGameState
         m_stateChanged = false;
         return NextState;
     }
+    public abstract void Update(GameTime gameTime);
 
     public abstract void Render(GameTime gameTime);
-
-    public abstract void Update(GameTime gameTime);
 
     public virtual void EscPressed(GameTime gameTime, float value)
     {

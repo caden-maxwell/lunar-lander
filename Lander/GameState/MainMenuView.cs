@@ -34,6 +34,8 @@ public class MainMenuView : GameStateView
         keyboardInput.RegisterCommand(Keys.Escape, true, new CommandDelegate(EscPressed));
     }
 
+    public override void Reload() { }
+
     public override void LoadContent(ContentManager contentManager)
     {
         m_fontMenu = contentManager.Load<SpriteFont>("Fonts/menu");

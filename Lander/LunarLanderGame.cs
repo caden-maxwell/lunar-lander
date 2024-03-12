@@ -13,6 +13,7 @@ public class LunarLanderGame : Game
     private IGameState m_currentState;
     private Dictionary<GameStateEnum, IGameState> m_states;
     private KeyboardInput m_keyboardInput;
+    private const GameStateEnum m_startState = GameStateEnum.GamePlay;
 
     public LunarLanderGame()
     {
@@ -23,8 +24,8 @@ public class LunarLanderGame : Game
 
     protected override void Initialize()
     {
-        m_graphics.PreferredBackBufferWidth = 1920;
-        m_graphics.PreferredBackBufferHeight = 1080;
+        m_graphics.PreferredBackBufferWidth = 1600;
+        m_graphics.PreferredBackBufferHeight = 900;
 
         m_graphics.ApplyChanges();
 
@@ -43,10 +44,10 @@ public class LunarLanderGame : Game
         foreach (var item in m_states)
             item.Value.Initialize(this.GraphicsDevice, m_graphics);
 
-        // Start with main menu
-        m_currentState = m_states[GameStateEnum.MainMenu];
+        // Start with game play state for debugging purposes
+        m_currentState = m_states[m_startState];
         m_prevState = m_currentState;
-        m_states[GameStateEnum.MainMenu].RegisterKeys(m_keyboardInput);
+        m_currentState.RegisterKeys(m_keyboardInput);
 
         base.Initialize();
     }
@@ -81,6 +82,8 @@ public class LunarLanderGame : Game
         {
             m_keyboardInput.UnregisterAll();
             m_currentState.RegisterKeys(m_keyboardInput);
+            m_currentState.Reload();
+
             Debug.WriteLine($"{m_currentState.State}: {m_keyboardInput}");
         }
 
