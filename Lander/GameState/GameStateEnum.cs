@@ -1,4 +1,4 @@
-﻿namespace Lander;
+﻿namespace LunarLander;
 
 public enum GameStateEnum
 {

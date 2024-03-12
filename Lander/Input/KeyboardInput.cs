@@ -2,7 +2,7 @@
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework;
 
-namespace Lander.Input;
+namespace LunarLander.Input;
 
 /// <summary>
 /// Derived input device for the PC Keyboard
