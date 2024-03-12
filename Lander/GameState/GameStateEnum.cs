@@ -6,7 +6,7 @@ public enum GameStateEnum
     GamePlay,
     HighScores,
     Help,
-    About,
+    Credits,
     Settings,
     Exit
 }

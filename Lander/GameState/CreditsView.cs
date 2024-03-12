@@ -6,13 +6,13 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Lander;
 
-public class AboutView : GameStateView
+public class CreditsView : GameStateView
 {
     private SpriteFont m_font;
     private const string MESSAGE = "*I* (Caden Maxwell) wrote this amazing game!";
 
-    public override GameStateEnum State { get; } = GameStateEnum.About;
-    public override GameStateEnum NextState { get; set; } = GameStateEnum.About;
+    public override GameStateEnum State { get; } = GameStateEnum.Credits;
+    public override GameStateEnum NextState { get; set; } = GameStateEnum.Credits;
 
     public override void Reload() { }
 

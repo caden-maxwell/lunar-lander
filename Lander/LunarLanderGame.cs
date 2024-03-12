@@ -36,7 +36,7 @@ public class LunarLanderGame : Game
             { GameStateEnum.MainMenu, new MainMenuView() },
             { GameStateEnum.GamePlay, new GamePlayView() },
             { GameStateEnum.HighScores, new HighScoresView() },
-            { GameStateEnum.About, new AboutView() },
+            { GameStateEnum.Credits, new CreditsView() },
             { GameStateEnum.Settings, new SettingsView() }
         };
 

@@ -18,8 +18,8 @@ public class MainMenuView : GameStateView
     {
         NewGame,
         HighScores,
-        About,
         Settings,
+        Credits,
         Quit,
         N
     }
@@ -55,8 +55,8 @@ public class MainMenuView : GameStateView
             200,
             m_currentSelection == MenuState.NewGame ? Color.Yellow : Color.Blue);
         bottom = DrawMenuItem(m_currentSelection == MenuState.HighScores ? m_fontMenuSelect : m_fontMenu, "High Scores", bottom, m_currentSelection == MenuState.HighScores ? Color.Yellow : Color.Blue);
-        bottom = DrawMenuItem(m_currentSelection == MenuState.About ? m_fontMenuSelect : m_fontMenu, "About", bottom, m_currentSelection == MenuState.About ? Color.Yellow : Color.Blue);
         bottom = DrawMenuItem(m_currentSelection == MenuState.Settings ? m_fontMenuSelect : m_fontMenu, "Settings", bottom, m_currentSelection == MenuState.Settings ? Color.Yellow : Color.Blue);
+        bottom = DrawMenuItem(m_currentSelection == MenuState.Credits ? m_fontMenuSelect : m_fontMenu, "Credits", bottom, m_currentSelection == MenuState.Credits ? Color.Yellow : Color.Blue);
         DrawMenuItem(m_currentSelection == MenuState.Quit ? m_fontMenuSelect : m_fontMenu, "Quit", bottom, m_currentSelection == MenuState.Quit ? Color.Yellow : Color.Blue);
 
         m_spriteBatch.End();
@@ -92,11 +92,21 @@ public class MainMenuView : GameStateView
     {
         switch (m_currentSelection)
         {
-            case MenuState.NewGame: ChangeState(GameStateEnum.GamePlay); break;
-            case MenuState.HighScores: ChangeState(GameStateEnum.HighScores); break;
-            case MenuState.About: ChangeState(GameStateEnum.About); break;
-            case MenuState.Settings: ChangeState(GameStateEnum.Settings); break;
-            case MenuState.Quit: ChangeState(GameStateEnum.Exit); break;
+            case MenuState.NewGame:
+                ChangeState(GameStateEnum.GamePlay);
+                break;
+            case MenuState.HighScores:
+                ChangeState(GameStateEnum.HighScores);
+                break;
+            case MenuState.Credits:
+                ChangeState(GameStateEnum.Credits);
+                break;
+            case MenuState.Settings:
+                ChangeState(GameStateEnum.Settings);
+                break;
+            case MenuState.Quit:
+                ChangeState(GameStateEnum.Exit);
+                break;
         }
     }
 
