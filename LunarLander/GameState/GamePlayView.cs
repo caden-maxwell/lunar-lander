@@ -44,11 +44,15 @@ public class GamePlayView : GameStateView
     }
 
     private readonly RandomGen m_rand = new();
-
     private readonly InputMapper m_inputMapper;
 
     public override GameStateEnum State { get; } = GameStateEnum.GamePlay;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.GamePlay;
+
+    private Vector2 m_gravity = new(0, 25 / 1000f); // 25px/s/s
+    private Texture2D m_texLander;
+    private Rectangle m_rectLander;
+    private Lander m_lander;
 
     public GamePlayView(InputMapper inputMapper)
     {
@@ -88,11 +92,24 @@ public class GamePlayView : GameStateView
             Right = (int)(m_graphics.PreferredBackBufferWidth * (1 - m_pctFromEdge))
         };
 
+        m_lander = new(
+            new Vector2(m_graphics.PreferredBackBufferWidth * 0.05f, m_graphics.PreferredBackBufferHeight * 0.05f), // Top left
+            new Vector2(0, 0), // No velocity
+            new Vector2(1, 0), // Pointing Up
+            50
+        );
+        m_rectLander = new(m_graphics.PreferredBackBufferWidth / 2, m_graphics.PreferredBackBufferHeight / 2, 50, 50);
+
         BuildTerrain();
     }
 
     public override void Reload()
     {
+        m_lander.Reset(
+            new Vector2(m_graphics.PreferredBackBufferWidth * 0.05f, m_graphics.PreferredBackBufferHeight * 0.05f),
+            new Vector2(0, 0), // No velocity
+            new Vector2(1, 0) // Pointing Up
+        );
         BuildTerrain();
     }
 
@@ -103,24 +120,25 @@ public class GamePlayView : GameStateView
         inputDevice.RegisterCommand(
             m_inputMapper.KeyboardMappings[ActionEnum.Thrust],
             false,
-            new CommandDelegate(Thrust)
+            new CommandDelegate(m_lander.Thrust)
         );
         inputDevice.RegisterCommand(
             m_inputMapper.KeyboardMappings[ActionEnum.RotateClockwise],
             false,
-            new CommandDelegate((gameTime, value) => Rotate(gameTime, value, true))
+            new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, true))
         );
         inputDevice.RegisterCommand(
             m_inputMapper.KeyboardMappings[ActionEnum.RotateCounterClockwise],
             false,
-            new CommandDelegate((gameTime, value) => Rotate(gameTime, value, false))
+            new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, false))
         );
     }
 
+    #region terrain
     private void BuildTerrain()
     {
         // Have terrain start 2/3 the way down, varying by ~10% of screen height typically
-        double randTerrainDisp = m_graphics.PreferredBackBufferHeight * 0.1f * m_rand.NextGaussian(0, 1);
+        float randTerrainDisp = m_graphics.PreferredBackBufferHeight * 0.1f * (float)m_rand.NextGaussian(0, 1);
         m_terrainYLevel = (int)(m_graphics.PreferredBackBufferHeight * 0.66f + randTerrainDisp);
 
         float boundsWidth = m_bounds.Right - m_bounds.Left;
@@ -228,13 +246,20 @@ public class GamePlayView : GameStateView
         RandMidpointDisplacement(firstHalf, lines, rand);
         RandMidpointDisplacement(secondHalf, lines, rand);
     }
+    #endregion terrain
 
     public override void LoadContent(ContentManager contentManager)
     {
-        m_font = contentManager.Load<SpriteFont>("Fonts/menu");
+        m_font = contentManager.Load<SpriteFont>("Fonts/stats");
+        m_texLander = contentManager.Load<Texture2D>("Images/emoji");
     }
 
-    public override void Update(GameTime gameTime) { }
+    public override void Update(GameTime gameTime)
+    {
+        m_lander.Velocity += m_gravity * gameTime.ElapsedGameTime.Milliseconds;
+        m_lander.Update(gameTime);
+        m_rectLander.Location = m_lander.Position.ToPoint();
+    }
 
     public override void Render(GameTime gameTime)
     {
@@ -256,26 +281,119 @@ public class GamePlayView : GameStateView
             );
         }
 
-        m_spriteBatch.End();
-    }
+        // m_lander.Angle is the angle with respect to the x-axis -- we need it with respect to the y-axis
+        float angle = Lander.DirectionToAngle(new Vector2(-m_lander.Direction.Y, m_lander.Direction.X));
+        m_spriteBatch.Draw(
+            m_texLander,
+            m_rectLander,
+            null,
+            Color.White,
+            angle,
+            new Vector2(m_texLander.Width / 2, m_texLander.Height / 2),
+            SpriteEffects.None,
+            0
+        );
 
-    private void Thrust(GameTime gameTime, float value)
-    {
-        Debug.WriteLine("Thrusting!!!");
-    }
-    private void Rotate(GameTime gameTime, float value, bool clockwise)
-    {
-        if (clockwise)
-            Debug.WriteLine("Rotating Clockwise!!!");
-        else
-            Debug.WriteLine("Rotating Counterclockswise!!!");
+        float x = m_lander.Velocity.X;
+        float y = -m_lander.Velocity.Y;
+        string text = $"Horizontal Velocity: {x,7:0.00}\nVertical Velocity: {y,7:0.00}";
+        float textX = m_graphics.PreferredBackBufferWidth * 0.01f;
+
+        Vector2 stringSize = m_font.MeasureString(text);
+        float textY = textX;
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+        textY += stringSize.Y + 10;
+
+        angle = MathHelper.ToDegrees(Math.Abs(angle));
+        text = $"Angle (from y-axis): {angle,7:0.00}";
+        stringSize = m_font.MeasureString(text);
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+        textY += stringSize.Y + 10;
+
+        x = m_lander.Position.X;
+        y = m_lander.Position.Y;
+        text = $"X: {x,7:0.00}\nY: {y,7:0.00}";
+
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+
+        m_spriteBatch.End();
     }
 
     private class Lander
     {
-        public Lander()
-        {
+        public Vector2 Position { get; private set; }
+        public Vector2 Velocity { get; set; } // Meters per Second
+        public float RotVelocity { get; private set; }
+        public Vector2 Direction { get; private set; } // positive y thrusts up
+        private float m_rotationSpeed = MathHelper.PiOver2 / 4000; // 2*PIpx/s
+        private float m_thrustPower; // In PX/MS
+        public float Speed { get { return Velocity.Length(); } }
+        public float Angle { get { return DirectionToAngle(Direction); } } // Angle with respect to x-axis
 
+        public Lander(Vector2 initialPosition, Vector2 initialVelocity, Vector2 initialDirection, float thrustPower = 75)
+        {
+            Reset(initialPosition, initialVelocity, initialDirection);
+            RotVelocity = 0;
+            m_thrustPower = thrustPower / 1000;
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            Position = Velocity * m_thrustPower + Position;
+            float angle = Angle;
+            angle += RotVelocity;
+            Direction = AngleToDirection(angle);
+        }
+
+        public void Thrust(GameTime gameTime, float value)
+        {
+            int elapsed = gameTime.ElapsedGameTime.Milliseconds;
+            Velocity += m_thrustPower * Direction * elapsed;
+            RotVelocity -= RotVelocity * 0.001f * elapsed;
+        }
+
+        public void Rotate(GameTime gameTime, float value, bool clockwise)
+        {
+            if (clockwise)
+                RotVelocity += m_rotationSpeed;
+            else
+                RotVelocity -= m_rotationSpeed;
+        }
+
+        public static Vector2 AngleToDirection(float angle)
+        {
+            return new Vector2(
+              (float)Math.Cos(angle),
+              (float)Math.Sin(angle)
+            );
+        }
+        public static float DirectionToAngle(Vector2 Direction)
+        {
+            return (float)Math.Atan2(Direction.Y, Direction.X);
+        }
+
+        public void Reset(Vector2 position, Vector2 velocity, Vector2 direction)
+        {
+            Position = position;
+            Velocity = velocity;
+            RotVelocity = 0;
+            direction.Y = -direction.Y;
+            Direction = Vector2.Normalize(direction);
         }
     }
 }
