@@ -130,33 +130,6 @@ public class GamePlayView : GameStateView
         BuildTerrain();
     }
 
-    public override void Reload()
-    {
-        m_lander.Reset(m_landerStartPosition, m_landerStartOrientation);
-        BuildTerrain();
-    }
-
-    public override void RegisterKeys(IInputDevice inputDevice)
-    {
-        base.RegisterKeys(inputDevice);
-
-        inputDevice.RegisterCommand(
-            m_inputMapper.KeyboardMappings[ActionEnum.Thrust],
-            false,
-            new CommandDelegate(m_lander.Thrust)
-        );
-        inputDevice.RegisterCommand(
-            m_inputMapper.KeyboardMappings[ActionEnum.RotateClockwise],
-            false,
-            new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, true))
-        );
-        inputDevice.RegisterCommand(
-            m_inputMapper.KeyboardMappings[ActionEnum.RotateCounterClockwise],
-            false,
-            new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, false))
-        );
-    }
-
     #region terrain
     private void BuildTerrain()
     {
@@ -215,8 +188,8 @@ public class GamePlayView : GameStateView
         int lineIdx;
         float x;
         float y;
-        Color topColor = Color.Black;
-        Color bottomColor = Color.DarkRed;
+        Color topColor = new(0x89, 0x89, 0x89);
+        Color bottomColor = new(0x49, 0x49, 0x49);
         for (lineIdx = 0; lineIdx < m_lines.Count; lineIdx++)
         {
             x = m_lines[lineIdx].Start.X;
@@ -284,6 +257,32 @@ public class GamePlayView : GameStateView
         float LANDER_WIDTH = LANDER_HEIGHT / aspectRatio;
         m_rectLander.Width = (int)(LANDER_HEIGHT * PX_PER_METER);
         m_rectLander.Height = (int)(LANDER_WIDTH * PX_PER_METER);
+    }
+    public override void Reload()
+    {
+        m_lander.Reset(m_landerStartPosition, m_landerStartOrientation);
+        BuildTerrain();
+    }
+
+    public override void RegisterKeys(IInputDevice inputDevice)
+    {
+        base.RegisterKeys(inputDevice);
+
+        inputDevice.RegisterCommand(
+            m_inputMapper.KeyboardMappings[ActionEnum.Thrust],
+            false,
+            new CommandDelegate(m_lander.Thrust)
+        );
+        inputDevice.RegisterCommand(
+            m_inputMapper.KeyboardMappings[ActionEnum.RotateClockwise],
+            false,
+            new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, true))
+        );
+        inputDevice.RegisterCommand(
+            m_inputMapper.KeyboardMappings[ActionEnum.RotateCounterClockwise],
+            false,
+            new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, false))
+        );
     }
 
     public override void Update(GameTime gameTime)

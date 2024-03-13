@@ -109,7 +109,7 @@ public class LunarLanderGame : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
+        GraphicsDevice.Clear(Color.Black);
 
         m_currentState.Render(gameTime);
 
