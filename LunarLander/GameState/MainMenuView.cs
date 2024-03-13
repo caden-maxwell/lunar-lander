@@ -53,7 +53,9 @@ public class MainMenuView : GameStateView
             m_currentSelection == MenuState.NewGame ? m_fontMenuSelect : m_fontMenu,
             "New Game",
             200,
-            m_currentSelection == MenuState.NewGame ? Color.Yellow : Color.Blue);
+            m_currentSelection == MenuState.NewGame ? Color.Yellow : Color.Blue
+        );
+
         bottom = DrawMenuItem(m_currentSelection == MenuState.HighScores ? m_fontMenuSelect : m_fontMenu, "High Scores", bottom, m_currentSelection == MenuState.HighScores ? Color.Yellow : Color.Blue);
         bottom = DrawMenuItem(m_currentSelection == MenuState.Settings ? m_fontMenuSelect : m_fontMenu, "Settings", bottom, m_currentSelection == MenuState.Settings ? Color.Yellow : Color.Blue);
         bottom = DrawMenuItem(m_currentSelection == MenuState.Credits ? m_fontMenuSelect : m_fontMenu, "Credits", bottom, m_currentSelection == MenuState.Credits ? Color.Yellow : Color.Blue);
