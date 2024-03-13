@@ -294,13 +294,14 @@ public class GamePlayView : GameStateView
             0
         );
 
-        float x = m_lander.Velocity.X;
-        float y = -m_lander.Velocity.Y;
-        string text = $"Horizontal Velocity: {x,7:0.00}\nVertical Velocity: {y,7:0.00}";
-        float textX = m_graphics.PreferredBackBufferWidth * 0.01f;
+        const float PX_PER_METER = 5;
 
-        Vector2 stringSize = m_font.MeasureString(text);
+        float x = m_lander.Velocity.X / PX_PER_METER;
+        float y = -m_lander.Velocity.Y / PX_PER_METER;
+        string text = $"Horizontal Velocity:{x,7:0.00} m/s\nVertical Velocity: {y,7:0.00} m/s";
+        float textX = m_graphics.PreferredBackBufferWidth * 0.01f;
         float textY = textX;
+        Vector2 stringSize = m_font.MeasureString(text);
         m_spriteBatch.DrawString(
             m_font,
             text,
@@ -309,8 +310,10 @@ public class GamePlayView : GameStateView
         );
         textY += stringSize.Y + 10;
 
-        angle = MathHelper.ToDegrees(Math.Abs(angle));
-        text = $"Angle (from y-axis): {angle,7:0.00}";
+        float speed = m_lander.Speed / PX_PER_METER;
+        text = $"Speed:";
+        textX = m_graphics.PreferredBackBufferWidth * 0.01f;
+
         stringSize = m_font.MeasureString(text);
         m_spriteBatch.DrawString(
             m_font,
@@ -318,17 +321,47 @@ public class GamePlayView : GameStateView
             new Vector2(textX, textY),
             Color.White
         );
-        textY += stringSize.Y + 10;
+        textX += stringSize.X;
 
-        x = m_lander.Position.X;
-        y = m_lander.Position.Y;
-        text = $"X: {x,7:0.00}\nY: {y,7:0.00}";
+        text = $"{speed,7:0.00}";
+        stringSize = m_font.MeasureString(text);
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            speed < 2 ? Color.LightGreen : Color.White
+        );
+        textX += stringSize.X;
 
+        text = $" m/s";
+        stringSize = m_font.MeasureString(text);
         m_spriteBatch.DrawString(
             m_font,
             text,
             new Vector2(textX, textY),
             Color.White
+        );
+
+        textX = m_graphics.PreferredBackBufferWidth * 0.01f;
+        textY += stringSize.Y + 10;
+
+        angle = MathHelper.ToDegrees(Math.Abs(angle));
+        text = $"Angle:";
+        stringSize = m_font.MeasureString(text);
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+        textX += stringSize.X;
+
+        text = $"{angle,7:0.00}";
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            angle < 5 ? Color.LightGreen : Color.White
         );
 
         m_spriteBatch.End();
