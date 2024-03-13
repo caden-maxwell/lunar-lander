@@ -6,6 +6,22 @@ using System.Diagnostics;
 
 namespace LunarLander;
 
+public enum SpaceBodiesEnum
+{
+    Sun,
+    Mercury,
+    Venus,
+    Earth,
+    Moon,
+    Mars,
+    Jupiter,
+    Titan,
+    Saturn,
+    Uranus,
+    Neptune,
+    Pluto
+}
+
 public class LunarLanderGame : Game
 {
     private readonly GraphicsDeviceManager m_graphics;
@@ -31,11 +47,11 @@ public class LunarLanderGame : Game
         m_graphics.ApplyChanges();
 
         m_inputDevice = new KeyboardInput(); // This line could ideally be any input
-        
+
         m_states = new Dictionary<GameStateEnum, IGameState>
         {
             { GameStateEnum.MainMenu, new MainMenuView() },
-            { GameStateEnum.GamePlay, new GamePlayView(m_inputMapper) },
+            { GameStateEnum.GamePlay, new GamePlayView(m_inputMapper, SpaceBodiesEnum.Moon) },
             { GameStateEnum.HighScores, new HighScoresView() },
             { GameStateEnum.Credits, new CreditsView() },
             { GameStateEnum.Settings, new SettingsView(m_inputMapper) }

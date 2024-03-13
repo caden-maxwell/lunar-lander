@@ -6,7 +6,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace LunarLander;
 
@@ -20,7 +19,8 @@ public class GamePlayView : GameStateView
     private int[] m_indexTriStrip;
     private List<Line> m_lines = new();
 
-    private readonly float m_srf = 0.65f; // Surface roughness factor - higher is more rough
+    private const float SCALE = 1.4f; // Simulation scale - higher values zoom in (make things bigger)
+    private readonly float m_srf = MathHelper.Clamp(0.55f / SCALE, 0.45f, 0.75f); // Surface roughness factor - higher is more rough
     private readonly float m_terrainDetail = 5; // X distance between terrain vertices - higher is less detailed
     private readonly float m_pctFromEdge = 0.15f; // Percent of screen that bounds are away from window edges
     private float m_terrainYLevel; // Starting y-level for terrain
@@ -49,16 +49,35 @@ public class GamePlayView : GameStateView
     public override GameStateEnum State { get; } = GameStateEnum.GamePlay;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.GamePlay;
 
-    const float GRAV_CONST = 1.62f; // Gravtiational acceleration on the moon
-    const float PX_PER_METER = 4.2f; // Approximate scale factor
-    private Vector2 m_gravity = new(0, GRAV_CONST * PX_PER_METER / 1000f); // px/ms
+    private Dictionary<SpaceBodiesEnum, float> m_gravAccels = new()
+    {
+        { SpaceBodiesEnum.Sun, 274},
+        { SpaceBodiesEnum.Mercury, 3.70f},
+        { SpaceBodiesEnum.Venus, 8.87f},
+        { SpaceBodiesEnum.Earth, 9.82f},
+        { SpaceBodiesEnum.Moon, 1.62f},
+        { SpaceBodiesEnum.Mars, 3.73f},
+        { SpaceBodiesEnum.Jupiter, 25.92f},
+        { SpaceBodiesEnum.Titan, 1.35f},
+        { SpaceBodiesEnum.Saturn, 11.19f},
+        { SpaceBodiesEnum.Uranus, 9.01f},
+        { SpaceBodiesEnum.Neptune, 11.27f},
+        { SpaceBodiesEnum.Pluto, 0.62f}
+    };
+    private const float PX_PER_METER = 4.28f * SCALE; // Approximate scale factor
+    private float GRAV_ACCEL;
+    private Vector2 m_gravity;
     private Texture2D m_texLander;
     private Rectangle m_rectLander;
     private Lander m_lander;
+    private Vector2 m_landerStartOrientation = new(1, 0);
+    private Vector2 m_landerStartPosition;
 
-    public GamePlayView(InputMapper inputMapper)
+    public GamePlayView(InputMapper inputMapper, SpaceBodiesEnum body)
     {
         m_inputMapper = inputMapper;
+        GRAV_ACCEL = m_gravAccels[body];
+        m_gravity = new(0, GRAV_ACCEL * PX_PER_METER / 1000000f); // px/ms^2
     }
 
     public override void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics)
@@ -88,30 +107,37 @@ public class GamePlayView : GameStateView
 
         m_bounds = new Bounds()
         {
-            Top = (int)(m_graphics.PreferredBackBufferHeight * m_pctFromEdge),
+            Top = (int)(m_graphics.PreferredBackBufferHeight * (m_pctFromEdge + 0.1f)),
             Bottom = (int)(m_graphics.PreferredBackBufferHeight * (1 - m_pctFromEdge)),
             Left = (int)(m_graphics.PreferredBackBufferWidth * m_pctFromEdge),
             Right = (int)(m_graphics.PreferredBackBufferWidth * (1 - m_pctFromEdge))
         };
 
-        m_lander = new(
-            new Vector2(m_graphics.PreferredBackBufferWidth * 0.05f, m_graphics.PreferredBackBufferHeight * 0.05f), // Top left
-            new Vector2(0, 0), // No velocity
-            new Vector2(1, 0), // Pointing Up
-            PX_PER_METER * 5
+        m_landerStartPosition = new Vector2(
+            m_graphics.PreferredBackBufferWidth * 0.05f, m_graphics.PreferredBackBufferHeight * 0.05f
         );
-        m_rectLander = new(m_graphics.PreferredBackBufferWidth / 2, m_graphics.PreferredBackBufferHeight / 2, 30, 30);
+
+        float landerAccel = 15f; // m/s^2
+        m_lander = new(
+            m_landerStartPosition,
+            m_landerStartOrientation,
+            landerAccel * PX_PER_METER / 1000000f // px/ms^2
+        );
+
+        const float LANDER_HEIGHT = 7; // Meters tall
+        const float LANDER_WIDTH = 7; // Meters tall
+        m_rectLander = new()
+        {
+            Width = (int)(LANDER_HEIGHT * PX_PER_METER),
+            Height = (int)(LANDER_WIDTH * PX_PER_METER)
+        };
 
         BuildTerrain();
     }
 
     public override void Reload()
     {
-        m_lander.Reset(
-            new Vector2(m_graphics.PreferredBackBufferWidth * 0.05f, m_graphics.PreferredBackBufferHeight * 0.05f),
-            new Vector2(0, 0), // No velocity
-            new Vector2(1, 0) // Pointing Up
-        );
+        m_lander.Reset(m_landerStartPosition, m_landerStartOrientation);
         BuildTerrain();
     }
 
@@ -144,7 +170,7 @@ public class GamePlayView : GameStateView
         m_terrainYLevel = (int)(m_graphics.PreferredBackBufferHeight * 0.66f + randTerrainDisp);
 
         float boundsWidth = m_bounds.Right - m_bounds.Left;
-        float landingZoneSize = m_graphics.PreferredBackBufferWidth * 0.05f; // Landing Zones only 5% of total width
+        float landingZoneSize = m_graphics.PreferredBackBufferWidth * 0.05f * SCALE; // Landing Zones only 5% of total width
         List<Line> zones = new();
         Vector2 prevEnd = new(0, m_terrainYLevel);
         for (int i = 0; i < m_numLandingZones; i++)
@@ -296,8 +322,8 @@ public class GamePlayView : GameStateView
             0
         );
 
-        float x = m_lander.Velocity.X / PX_PER_METER;
-        float y = -m_lander.Velocity.Y / PX_PER_METER;
+        float x = m_lander.Velocity.X / PX_PER_METER * 1000;
+        float y = -m_lander.Velocity.Y / PX_PER_METER * 1000;
         string text = $"Horizontal Velocity:{x,7:0.00} m/s\nVertical Velocity: {y,7:0.00} m/s";
         float textX = m_graphics.PreferredBackBufferWidth * 0.01f;
         float textY = textX;
@@ -310,7 +336,7 @@ public class GamePlayView : GameStateView
         );
         textY += stringSize.Y + 10;
 
-        float speed = m_lander.Speed / PX_PER_METER;
+        float speed = m_lander.Speed / PX_PER_METER * 1000;
         text = $"Speed:";
         textX = m_graphics.PreferredBackBufferWidth * 0.01f;
 
@@ -373,30 +399,29 @@ public class GamePlayView : GameStateView
         public Vector2 Velocity { get; set; } // Meters per Second
         public float AngVelocity { get; private set; }
         public Vector2 Direction { get; private set; } // positive y thrusts up
-        private float m_rotationForce = 1 / 50000f;
-        private float m_thrustForce;
+        private float m_rotationForce = 1.5f / 1000000f;
+        private float m_thrustAccel;
         public float Speed { get { return Velocity.Length(); } }
         public float Angle { get { return DirectionToAngle(Direction); } } // Angle with respect to x-axis
 
-        public Lander(Vector2 initialPosition, Vector2 initialVelocity, Vector2 initialDirection, float thrustForce = 75)
+        public Lander(Vector2 initialPosition, Vector2 initialDirection, float thrustAccel)
         {
-            Reset(initialPosition, initialVelocity, initialDirection);
+            Reset(initialPosition, initialDirection);
             AngVelocity = 0;
-            m_thrustForce = thrustForce / 1000;
+            m_thrustAccel = thrustAccel; // px/ms^2
         }
 
         public void Update(GameTime gameTime)
         {
-            Position = Velocity * m_thrustForce + Position;
-            float angle = Angle;
-            angle += AngVelocity;
-            Direction = AngleToDirection(angle);
+            int elapsed = gameTime.ElapsedGameTime.Milliseconds;
+            Position += Velocity * elapsed;
+            Direction = AngleToDirection(Angle + AngVelocity * elapsed);
         }
 
         public void Thrust(GameTime gameTime, float value)
         {
             int elapsed = gameTime.ElapsedGameTime.Milliseconds;
-            Velocity += m_thrustForce * Direction * elapsed;
+            Velocity += m_thrustAccel * Direction * elapsed;
             AngVelocity -= AngVelocity * 0.001f * elapsed;
         }
 
@@ -422,10 +447,10 @@ public class GamePlayView : GameStateView
             return (float)Math.Atan2(Direction.Y, Direction.X);
         }
 
-        public void Reset(Vector2 position, Vector2 velocity, Vector2 direction)
+        public void Reset(Vector2 position, Vector2 direction)
         {
             Position = position;
-            Velocity = velocity;
+            Velocity = new(0, 0);
             AngVelocity = 0;
             direction.Y = -direction.Y;
             Direction = Vector2.Normalize(direction);
