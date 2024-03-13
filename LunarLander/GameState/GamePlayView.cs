@@ -49,7 +49,9 @@ public class GamePlayView : GameStateView
     public override GameStateEnum State { get; } = GameStateEnum.GamePlay;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.GamePlay;
 
-    private Vector2 m_gravity = new(0, 25 / 1000f); // 25px/s^2
+    const float GRAV_CONST = 1.62f; // Gravtiational acceleration on the moon
+    const float PX_PER_METER = 4.2f; // Approximate scale factor
+    private Vector2 m_gravity = new(0, GRAV_CONST * PX_PER_METER / 1000f); // px/ms
     private Texture2D m_texLander;
     private Rectangle m_rectLander;
     private Lander m_lander;
@@ -96,9 +98,9 @@ public class GamePlayView : GameStateView
             new Vector2(m_graphics.PreferredBackBufferWidth * 0.05f, m_graphics.PreferredBackBufferHeight * 0.05f), // Top left
             new Vector2(0, 0), // No velocity
             new Vector2(1, 0), // Pointing Up
-            50
+            PX_PER_METER * 5
         );
-        m_rectLander = new(m_graphics.PreferredBackBufferWidth / 2, m_graphics.PreferredBackBufferHeight / 2, 50, 50);
+        m_rectLander = new(m_graphics.PreferredBackBufferWidth / 2, m_graphics.PreferredBackBufferHeight / 2, 30, 30);
 
         BuildTerrain();
     }
@@ -293,8 +295,6 @@ public class GamePlayView : GameStateView
             SpriteEffects.None,
             0
         );
-
-        const float PX_PER_METER = 5;
 
         float x = m_lander.Velocity.X / PX_PER_METER;
         float y = -m_lander.Velocity.Y / PX_PER_METER;
