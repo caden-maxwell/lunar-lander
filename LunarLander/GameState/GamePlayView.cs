@@ -71,7 +71,7 @@ public class GamePlayView : GameStateView
     private Rectangle m_rectLander = new();
     private Rectangle m_rectSpriteSource = new();
     private Lander m_lander;
-    private Vector2 m_landerStartOrientation = new(1, 0);
+    private Vector2 m_landerStartOrientation = new(2, 1);
     private Vector2 m_landerStartPosition;
     private bool m_landerThrustApplied = false;
     private int m_landerThrustTimer = 0;
@@ -117,7 +117,7 @@ public class GamePlayView : GameStateView
         };
 
         m_landerStartPosition = new Vector2(
-            m_graphics.PreferredBackBufferWidth * 0.05f, m_graphics.PreferredBackBufferHeight * 0.05f
+            m_graphics.PreferredBackBufferWidth * 0.35f, m_graphics.PreferredBackBufferHeight * 0.05f
         );
 
         float landerAccel = 15f; // m/s^2
