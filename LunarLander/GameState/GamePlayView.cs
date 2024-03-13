@@ -73,6 +73,8 @@ public class GamePlayView : GameStateView
     private Lander m_lander;
     private Vector2 m_landerStartOrientation = new(1, 0);
     private Vector2 m_landerStartPosition;
+    private bool m_landerThrustApplied = false;
+    private int m_landerThrustTimer = 0;
 
     public GamePlayView(InputMapper inputMapper, SpaceBodiesEnum body)
     {
@@ -286,7 +288,16 @@ public class GamePlayView : GameStateView
 
     public override void Update(GameTime gameTime)
     {
-        m_lander.Velocity += m_gravity * gameTime.ElapsedGameTime.Milliseconds;
+        int elapsed = gameTime.ElapsedGameTime.Milliseconds;
+        m_lander.Velocity += m_gravity * elapsed;
+        m_landerThrustApplied = m_lander.UsingThrust;
+
+        m_landerThrustTimer = m_landerThrustApplied ?
+            m_landerThrustTimer + elapsed :
+            m_landerThrustTimer - 2 * elapsed;
+        m_landerThrustTimer = MathHelper.Clamp(m_landerThrustTimer, 0, 501);
+        m_landerThrustTimer %= 500;
+
         m_lander.Update(gameTime);
         m_rectLander.Location = m_lander.Position.ToPoint();
     }
@@ -310,6 +321,12 @@ public class GamePlayView : GameStateView
                 2 * (m_lines.Count - 1)
             );
         }
+
+        m_rectSpriteSource.X = 0;
+        if (m_landerThrustTimer > 250)
+            m_rectSpriteSource.X = m_rectSpriteSource.Width * 2;
+        else if (m_landerThrustTimer > 0)
+            m_rectSpriteSource.X = m_rectSpriteSource.Width;
 
         // m_lander.Angle is the angle with respect to the x-axis -- we need it with respect to the y-axis
         float angle = Lander.DirectionToAngle(new Vector2(-m_lander.Direction.Y, m_lander.Direction.X));
@@ -405,6 +422,7 @@ public class GamePlayView : GameStateView
         private float m_thrustAccel;
         public float Speed { get { return Velocity.Length(); } }
         public float Angle { get { return DirectionToAngle(Direction); } } // Angle with respect to x-axis
+        public bool UsingThrust { get; set; }
 
         public Lander(Vector2 initialPosition, Vector2 initialDirection, float thrustAccel)
         {
@@ -415,6 +433,7 @@ public class GamePlayView : GameStateView
 
         public void Update(GameTime gameTime)
         {
+            UsingThrust = false;
             int elapsed = gameTime.ElapsedGameTime.Milliseconds;
             Position += Velocity * elapsed;
             Direction = AngleToDirection(Angle + AngVelocity * elapsed);
@@ -425,6 +444,7 @@ public class GamePlayView : GameStateView
             int elapsed = gameTime.ElapsedGameTime.Milliseconds;
             Velocity += m_thrustAccel * Direction * elapsed;
             AngVelocity -= AngVelocity * 0.001f * elapsed;
+            UsingThrust = true;
         }
 
         public void Rotate(GameTime gameTime, float value, bool clockwise)
