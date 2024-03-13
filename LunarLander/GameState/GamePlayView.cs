@@ -68,7 +68,8 @@ public class GamePlayView : GameStateView
     private float GRAV_ACCEL;
     private Vector2 m_gravity;
     private Texture2D m_texLander;
-    private Rectangle m_rectLander;
+    private Rectangle m_rectLander = new();
+    private Rectangle m_rectSpriteSource = new();
     private Lander m_lander;
     private Vector2 m_landerStartOrientation = new(1, 0);
     private Vector2 m_landerStartPosition;
@@ -123,14 +124,6 @@ public class GamePlayView : GameStateView
             m_landerStartOrientation,
             landerAccel * PX_PER_METER / 1000000f // px/ms^2
         );
-
-        const float LANDER_HEIGHT = 7; // Meters tall
-        const float LANDER_WIDTH = 7; // Meters tall
-        m_rectLander = new()
-        {
-            Width = (int)(LANDER_HEIGHT * PX_PER_METER),
-            Height = (int)(LANDER_WIDTH * PX_PER_METER)
-        };
 
         BuildTerrain();
     }
@@ -279,7 +272,16 @@ public class GamePlayView : GameStateView
     public override void LoadContent(ContentManager contentManager)
     {
         m_font = contentManager.Load<SpriteFont>("Fonts/stats");
-        m_texLander = contentManager.Load<Texture2D>("Images/emoji");
+        m_texLander = contentManager.Load<Texture2D>("Images/lander");
+        m_rectSpriteSource.Width = m_texLander.Width / 3;
+        m_rectSpriteSource.Height = m_texLander.Height;
+
+        float aspectRatio = m_rectSpriteSource.Width / (float)m_rectSpriteSource.Height;
+
+        const float LANDER_HEIGHT = 7; // Meters tall
+        float LANDER_WIDTH = LANDER_HEIGHT / aspectRatio;
+        m_rectLander.Width = (int)(LANDER_HEIGHT * PX_PER_METER);
+        m_rectLander.Height = (int)(LANDER_WIDTH * PX_PER_METER);
     }
 
     public override void Update(GameTime gameTime)
@@ -291,7 +293,7 @@ public class GamePlayView : GameStateView
 
     public override void Render(GameTime gameTime)
     {
-        m_spriteBatch.Begin();
+        m_spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
         m_graphics.GraphicsDevice.RasterizerState = m_rasterizerState;
         foreach (EffectPass pass in m_effect.CurrentTechnique.Passes)
@@ -314,10 +316,10 @@ public class GamePlayView : GameStateView
         m_spriteBatch.Draw(
             m_texLander,
             m_rectLander,
-            null,
+            m_rectSpriteSource,
             Color.White,
             angle,
-            new Vector2(m_texLander.Width / 2, m_texLander.Height / 2),
+            new Vector2(m_rectSpriteSource.Width / 2, m_rectSpriteSource.Height / 2),
             SpriteEffects.None,
             0
         );
