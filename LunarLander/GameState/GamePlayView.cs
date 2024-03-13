@@ -49,7 +49,7 @@ public class GamePlayView : GameStateView
     public override GameStateEnum State { get; } = GameStateEnum.GamePlay;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.GamePlay;
 
-    private Vector2 m_gravity = new(0, 25 / 1000f); // 25px/s/s
+    private Vector2 m_gravity = new(0, 25 / 1000f); // 25px/s^2
     private Texture2D m_texLander;
     private Rectangle m_rectLander;
     private Lander m_lander;
@@ -338,41 +338,43 @@ public class GamePlayView : GameStateView
     {
         public Vector2 Position { get; private set; }
         public Vector2 Velocity { get; set; } // Meters per Second
-        public float RotVelocity { get; private set; }
+        public float AngVelocity { get; private set; }
         public Vector2 Direction { get; private set; } // positive y thrusts up
-        private float m_rotationSpeed = MathHelper.PiOver2 / 4000; // 2*PIpx/s
-        private float m_thrustPower; // In PX/MS
+        private float m_rotationForce = 1 / 50000f;
+        private float m_thrustForce;
         public float Speed { get { return Velocity.Length(); } }
         public float Angle { get { return DirectionToAngle(Direction); } } // Angle with respect to x-axis
 
-        public Lander(Vector2 initialPosition, Vector2 initialVelocity, Vector2 initialDirection, float thrustPower = 75)
+        public Lander(Vector2 initialPosition, Vector2 initialVelocity, Vector2 initialDirection, float thrustForce = 75)
         {
             Reset(initialPosition, initialVelocity, initialDirection);
-            RotVelocity = 0;
-            m_thrustPower = thrustPower / 1000;
+            AngVelocity = 0;
+            m_thrustForce = thrustForce / 1000;
         }
 
         public void Update(GameTime gameTime)
         {
-            Position = Velocity * m_thrustPower + Position;
+            Position = Velocity * m_thrustForce + Position;
             float angle = Angle;
-            angle += RotVelocity;
+            angle += AngVelocity;
             Direction = AngleToDirection(angle);
         }
 
         public void Thrust(GameTime gameTime, float value)
         {
             int elapsed = gameTime.ElapsedGameTime.Milliseconds;
-            Velocity += m_thrustPower * Direction * elapsed;
-            RotVelocity -= RotVelocity * 0.001f * elapsed;
+            Velocity += m_thrustForce * Direction * elapsed;
+            AngVelocity -= AngVelocity * 0.001f * elapsed;
         }
 
         public void Rotate(GameTime gameTime, float value, bool clockwise)
         {
+            float elapsed = gameTime.ElapsedGameTime.Milliseconds;
+            float changeVel = m_rotationForce * elapsed;
             if (clockwise)
-                RotVelocity += m_rotationSpeed;
+                AngVelocity += changeVel;
             else
-                RotVelocity -= m_rotationSpeed;
+                AngVelocity -= changeVel;
         }
 
         public static Vector2 AngleToDirection(float angle)
@@ -391,7 +393,7 @@ public class GamePlayView : GameStateView
         {
             Position = position;
             Velocity = velocity;
-            RotVelocity = 0;
+            AngVelocity = 0;
             direction.Y = -direction.Y;
             Direction = Vector2.Normalize(direction);
         }
