@@ -41,8 +41,8 @@ public class LunarLanderGame : Game
 
     protected override void Initialize()
     {
-        m_graphics.PreferredBackBufferWidth = 1600;
-        m_graphics.PreferredBackBufferHeight = 900;
+        m_graphics.PreferredBackBufferWidth = 1280;
+        m_graphics.PreferredBackBufferHeight = 720;
 
         m_graphics.ApplyChanges();
 
@@ -51,7 +51,7 @@ public class LunarLanderGame : Game
         m_states = new Dictionary<GameStateEnum, IGameState>
         {
             { GameStateEnum.MainMenu, new MainMenuView() },
-            { GameStateEnum.GamePlay, new GamePlayView(m_inputMapper, SpaceBodiesEnum.Moon) },
+            { GameStateEnum.GamePlay, new GamePlayView(m_inputMapper, SpaceBodiesEnum.Earth) },
             { GameStateEnum.HighScores, new HighScoresView() },
             { GameStateEnum.Credits, new CreditsView() },
             { GameStateEnum.Settings, new SettingsView(m_inputMapper) }

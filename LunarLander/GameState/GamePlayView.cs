@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace LunarLander;
 
@@ -35,6 +36,7 @@ public class GamePlayView : GameStateView
 
     private int m_level = 1;
     private int m_numLandingZones = 2;
+    private List<Line> m_landingZones = new();
     private enum GamePlayState
     {
         Transition,
@@ -75,6 +77,14 @@ public class GamePlayView : GameStateView
     private Vector2 m_landerStartPosition;
     private bool m_landerThrustApplied = false;
     private int m_landerThrustTimer = 0;
+    private enum CollisionType
+    {
+        Terrain,
+        LandingZone,
+        None
+    }
+    private CollisionType m_collision = CollisionType.None;
+    private GamePlayState m_gameState = GamePlayState.Playing;
 
     public GamePlayView(InputMapper inputMapper, SpaceBodiesEnum body)
     {
@@ -137,6 +147,7 @@ public class GamePlayView : GameStateView
         float randTerrainDisp = m_graphics.PreferredBackBufferHeight * 0.1f * (float)m_rand.NextGaussian(0, 1);
         m_terrainYLevel = (int)(m_graphics.PreferredBackBufferHeight * 0.66f + randTerrainDisp);
 
+        m_landingZones.Clear();
         float boundsWidth = m_bounds.Right - m_bounds.Left;
         float landingZoneSize = m_graphics.PreferredBackBufferWidth * 0.05f * SCALE; // Landing Zones only 5% of total width
         List<Line> zones = new();
@@ -159,6 +170,7 @@ public class GamePlayView : GameStateView
 
             zones.Add(terrainZone);
             zones.Add(landingZone);
+            m_landingZones.Add(landingZone);
 
             prevEnd = landingZoneEnd;
         }
@@ -257,7 +269,11 @@ public class GamePlayView : GameStateView
         float LANDER_WIDTH = LANDER_HEIGHT / aspectRatio;
         m_rectLander.Width = (int)(LANDER_HEIGHT * PX_PER_METER);
         m_rectLander.Height = (int)(LANDER_WIDTH * PX_PER_METER);
+
+        m_lander.SetWidth(m_rectLander.Width);
+        m_lander.SetHeight(m_rectLander.Height);
     }
+
     public override void Reload()
     {
         m_lander.Reset(m_landerStartPosition, m_landerStartOrientation);
@@ -299,6 +315,27 @@ public class GamePlayView : GameStateView
 
         m_lander.Update(gameTime);
         m_rectLander.Location = m_lander.Position.ToPoint();
+
+        m_collision = CollisionDetector();
+    }
+
+    private CollisionType CollisionDetector()
+    {
+        List<Point> corners = m_lander.Corners;
+        List<Line> landerLines = new();
+        for (int i = 0; i < corners.Count; i++)
+            landerLines.Add(new(corners[i].ToVector2(), corners[(i + 1) % corners.Count].ToVector2()));
+
+        CollisionType collision = CollisionType.None;
+        foreach (Line terrainLine in m_lines)
+            foreach (Line landerLine in landerLines)
+                if (Line.Intersecting(landerLine, terrainLine))
+                    if (m_landingZones.Contains(terrainLine))
+                        collision = CollisionType.LandingZone;
+                    else
+                        return CollisionType.Terrain;
+
+        return collision;
     }
 
     public override void Render(GameTime gameTime)
@@ -407,6 +444,76 @@ public class GamePlayView : GameStateView
             new Vector2(textX, textY),
             angle < 5 ? Color.LightGreen : Color.White
         );
+        textX = m_graphics.PreferredBackBufferWidth * 0.01f;
+        textY += stringSize.Y + 10;
+
+        Point corner = m_lander.Corners[0];
+        text = $"TL Pos: {corner,7:0.00}";
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+        textX = m_graphics.PreferredBackBufferWidth * 0.01f;
+        textY += stringSize.Y + 10;
+
+        corner = m_lander.Corners[1];
+        text = $"TR Pos: {corner,7:0.00}";
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+        textY += stringSize.Y + 10;
+
+        corner = m_lander.Corners[2];
+        text = $"BR Pos: {corner,7:0.00}";
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+        textY += stringSize.Y + 10;
+
+        corner = m_lander.Corners[3];
+        text = $"BL Pos: {corner,7:0.00}";
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+        textX = m_graphics.PreferredBackBufferWidth * 0.90f;
+        textY = m_graphics.PreferredBackBufferWidth * 0.01f;
+
+        double fps = 1000 / gameTime.ElapsedGameTime.TotalMilliseconds;
+        text = $"FPS: {fps,7:0.00}";
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+
+        textX = m_graphics.PreferredBackBufferWidth * 0.50f;
+        textY = m_graphics.PreferredBackBufferWidth * 0.50f;
+
+        Color color = m_collision switch
+        {
+            CollisionType.Terrain => Color.DarkRed,
+            CollisionType.None => Color.White,
+            CollisionType.LandingZone => Color.LightGreen,
+            _ => throw new NotImplementedException()
+        };
+        m_spriteBatch.DrawString(
+            m_font,
+            m_collision.ToString(),
+            new Vector2(textX, textY),
+            color
+        );
 
         m_spriteBatch.End();
     }
@@ -414,6 +521,42 @@ public class GamePlayView : GameStateView
     private class Lander
     {
         public Vector2 Position { get; private set; }
+        public int Width { get; private set; }
+        public int Height { get; private set; }
+        public List<Point> Corners
+        {
+            get
+            {
+                Point tl = new();
+                Point tr = new();
+                Point br = new();
+                Point bl = new();
+                float angle = Angle + MathHelper.PiOver2;
+                float halfWidth = Width / 2;
+                float halfHeight = Height / 2;
+
+                // Needed to swap top and bottom since Y-axis is inverted: https://stackoverflow.com/questions/41898990/find-corners-of-a-rotated-rectangle-given-its-center-point-and-rotation
+                bl.X = (int)(Position.X - ((halfWidth) * Math.Cos(angle)) - ((halfHeight - Height * 0.1f) * Math.Sin(angle)));
+                bl.Y = (int)(Position.Y - ((halfWidth) * Math.Sin(angle)) + ((halfHeight - Height * 0.1f) * Math.Cos(angle)));
+
+                br.X = (int)(Position.X + ((halfWidth) * Math.Cos(angle)) - ((halfHeight - Height * 0.1f) * Math.Sin(angle)));
+                br.Y = (int)(Position.Y + ((halfWidth) * Math.Sin(angle)) + ((halfHeight - Height * 0.1f) * Math.Cos(angle)));
+
+                tr.X = (int)(Position.X + ((halfWidth) * Math.Cos(angle)) + ((halfHeight) * Math.Sin(angle)));
+                tr.Y = (int)(Position.Y + ((halfWidth) * Math.Sin(angle)) - ((halfHeight) * Math.Cos(angle)));
+
+                tl.X = (int)(Position.X - ((halfWidth) * Math.Cos(angle)) + ((halfHeight) * Math.Sin(angle)));
+                tl.Y = (int)(Position.Y - ((halfWidth) * Math.Sin(angle)) - ((halfHeight) * Math.Cos(angle)));
+
+                return new()
+                {
+                    tl,
+                    tr,
+                    br,
+                    bl,
+                };
+            }
+        }
         public Vector2 Velocity { get; set; } // Meters per Second
         public float AngVelocity { get; private set; }
         public Vector2 Direction { get; private set; } // positive y thrusts up
@@ -466,6 +609,15 @@ public class GamePlayView : GameStateView
         public static float DirectionToAngle(Vector2 Direction)
         {
             return (float)Math.Atan2(Direction.Y, Direction.X);
+        }
+
+        public void SetWidth(int width)
+        {
+            Width = width;
+        }
+        public void SetHeight(int height)
+        {
+            Height = height;
         }
 
         public void Reset(Vector2 position, Vector2 direction)
