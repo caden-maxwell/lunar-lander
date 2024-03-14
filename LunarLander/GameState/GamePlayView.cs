@@ -13,6 +13,7 @@ namespace LunarLander;
 public class GamePlayView : GameStateView
 {
     private SpriteFont m_font;
+    private SpriteFont m_fontBig;
     private BasicEffect m_effect;
     private RasterizerState m_rasterizerState;
 
@@ -264,6 +265,7 @@ public class GamePlayView : GameStateView
     public override void LoadContent(ContentManager contentManager)
     {
         m_font = contentManager.Load<SpriteFont>("Fonts/stats");
+        m_fontBig = contentManager.Load<SpriteFont>("Fonts/stats-big");
         m_texLander = contentManager.Load<Texture2D>("Images/lander");
         m_rectSpriteSource.Width = m_texLander.Width / 3;
         m_rectSpriteSource.Height = m_texLander.Height;
@@ -310,7 +312,7 @@ public class GamePlayView : GameStateView
 
     public override void Update(GameTime gameTime)
     {
-        if (m_gameState == GamePlayState.End)
+        if (m_gameState != GamePlayState.Playing)
             return;
         int elapsed = gameTime.ElapsedGameTime.Milliseconds;
         m_lander.Velocity += m_gravity * elapsed;
@@ -331,10 +333,11 @@ public class GamePlayView : GameStateView
 
         m_isSafeAngle = MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)) < 5;
         m_isSafeSpeed = m_lander.Speed / PX_PER_METER * 1000 < 2;
-        if (m_collision == CollisionType.LandingZone && m_isSafeSpeed && m_isSafeAngle)
-            m_gameState = GamePlayState.Win;
-
-        Debug.WriteLine(m_gameState.ToString());
+        if (m_collision == CollisionType.LandingZone)
+            if (m_isSafeSpeed && m_isSafeAngle)
+                m_gameState = GamePlayState.Win;
+            else
+                m_gameState = GamePlayState.End;
     }
 
     private CollisionType CollisionDetector()
@@ -465,48 +468,6 @@ public class GamePlayView : GameStateView
         textX = m_graphics.PreferredBackBufferWidth * 0.01f;
         textY += stringSize.Y + 10;
 
-        Point corner = m_lander.Corners[0];
-        text = $"TL Pos: {corner,7:0.00}";
-        m_spriteBatch.DrawString(
-            m_font,
-            text,
-            new Vector2(textX, textY),
-            Color.White
-        );
-        textX = m_graphics.PreferredBackBufferWidth * 0.01f;
-        textY += stringSize.Y + 10;
-
-        corner = m_lander.Corners[1];
-        text = $"TR Pos: {corner,7:0.00}";
-        m_spriteBatch.DrawString(
-            m_font,
-            text,
-            new Vector2(textX, textY),
-            Color.White
-        );
-        textY += stringSize.Y + 10;
-
-        corner = m_lander.Corners[2];
-        text = $"BR Pos: {corner,7:0.00}";
-        m_spriteBatch.DrawString(
-            m_font,
-            text,
-            new Vector2(textX, textY),
-            Color.White
-        );
-        textY += stringSize.Y + 10;
-
-        corner = m_lander.Corners[3];
-        text = $"BL Pos: {corner,7:0.00}";
-        m_spriteBatch.DrawString(
-            m_font,
-            text,
-            new Vector2(textX, textY),
-            Color.White
-        );
-        textX = m_graphics.PreferredBackBufferWidth * 0.90f;
-        textY = m_graphics.PreferredBackBufferWidth * 0.01f;
-
         double fps = 1000 / gameTime.ElapsedGameTime.TotalMilliseconds;
         text = $"FPS: {fps,7:0.00}";
         m_spriteBatch.DrawString(
@@ -519,10 +480,21 @@ public class GamePlayView : GameStateView
         textX = m_graphics.PreferredBackBufferWidth * 0.50f;
         textY = m_graphics.PreferredBackBufferHeight * 0.50f;
 
+        text = m_gameState switch
+        {
+            GamePlayState.Win => "HOORAYYYY!!!!!",
+            GamePlayState.End => "BOOOOO!!!!",
+            GamePlayState.Playing => "",
+            GamePlayState.Transition => throw new NotImplementedException(),
+            GamePlayState.Paused => throw new NotImplementedException(),
+            _ => throw new NotImplementedException(),
+        };
+
+        stringSize = m_fontBig.MeasureString(text);
         m_spriteBatch.DrawString(
-            m_font,
-            m_collision.ToString(),
-            new Vector2(textX, textY),
+            m_fontBig,
+            text,
+            new Vector2(textX - (stringSize.X / 2), textY),
             Color.White
         );
 
