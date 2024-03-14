@@ -42,7 +42,8 @@ public class GamePlayView : GameStateView
         Transition,
         Playing,
         Paused,
-        End
+        End,
+        Win
     }
 
     private readonly RandomGen m_rand = new();
@@ -77,6 +78,10 @@ public class GamePlayView : GameStateView
     private Vector2 m_landerStartPosition;
     private bool m_landerThrustApplied = false;
     private int m_landerThrustTimer = 0;
+    private float m_safeLandingSpeed = 2; // m/s
+    private float m_safeLandingAngle = 5; // Degrees
+    private bool m_isSafeSpeed = false;
+    private bool m_isSafeAngle = false;
     private enum CollisionType
     {
         Terrain,
@@ -278,6 +283,8 @@ public class GamePlayView : GameStateView
     {
         m_lander.Reset(m_landerStartPosition, m_landerStartOrientation);
         BuildTerrain();
+        m_collision = CollisionType.None;
+        m_gameState = GamePlayState.Playing;
     }
 
     public override void RegisterKeys(IInputDevice inputDevice)
@@ -303,6 +310,8 @@ public class GamePlayView : GameStateView
 
     public override void Update(GameTime gameTime)
     {
+        if (m_gameState == GamePlayState.End)
+            return;
         int elapsed = gameTime.ElapsedGameTime.Milliseconds;
         m_lander.Velocity += m_gravity * elapsed;
         m_landerThrustApplied = m_lander.UsingThrust;
@@ -317,6 +326,15 @@ public class GamePlayView : GameStateView
         m_rectLander.Location = m_lander.Position.ToPoint();
 
         m_collision = CollisionDetector();
+        if (m_collision == CollisionType.Terrain)
+            m_gameState = GamePlayState.End;
+
+        m_isSafeAngle = MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)) < 5;
+        m_isSafeSpeed = m_lander.Speed / PX_PER_METER * 1000 < 2;
+        if (m_collision == CollisionType.LandingZone && m_isSafeSpeed && m_isSafeAngle)
+            m_gameState = GamePlayState.Win;
+
+        Debug.WriteLine(m_gameState.ToString());
     }
 
     private CollisionType CollisionDetector()
@@ -331,6 +349,7 @@ public class GamePlayView : GameStateView
             foreach (Line landerLine in landerLines)
                 if (Line.Intersecting(landerLine, terrainLine))
                     if (m_landingZones.Contains(terrainLine))
+                        // Don't immediatly return for landing zone, we could still be colliding with terrain
                         collision = CollisionType.LandingZone;
                     else
                         return CollisionType.Terrain;
@@ -365,13 +384,12 @@ public class GamePlayView : GameStateView
             m_rectSpriteSource.X = m_rectSpriteSource.Width;
 
         // m_lander.Angle is the angle with respect to the x-axis -- we need it with respect to the y-axis
-        float angle = Lander.DirectionToAngle(new Vector2(-m_lander.Direction.Y, m_lander.Direction.X));
         m_spriteBatch.Draw(
             m_texLander,
             m_rectLander,
             m_rectSpriteSource,
             Color.White,
-            angle,
+            m_lander.AngleYAxis,
             new Vector2(m_rectSpriteSource.Width / 2, m_rectSpriteSource.Height / 2),
             SpriteEffects.None,
             0
@@ -410,7 +428,7 @@ public class GamePlayView : GameStateView
             m_font,
             text,
             new Vector2(textX, textY),
-            speed < 2 ? Color.LightGreen : Color.White
+            m_isSafeSpeed ? Color.LightGreen : Color.White
         );
         textX += stringSize.X;
 
@@ -426,7 +444,7 @@ public class GamePlayView : GameStateView
         textX = m_graphics.PreferredBackBufferWidth * 0.01f;
         textY += stringSize.Y + 10;
 
-        angle = MathHelper.ToDegrees(Math.Abs(angle));
+        float angle = MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis));
         text = $"Angle:";
         stringSize = m_font.MeasureString(text);
         m_spriteBatch.DrawString(
@@ -442,7 +460,7 @@ public class GamePlayView : GameStateView
             m_font,
             text,
             new Vector2(textX, textY),
-            angle < 5 ? Color.LightGreen : Color.White
+            m_isSafeAngle ? Color.LightGreen : Color.White
         );
         textX = m_graphics.PreferredBackBufferWidth * 0.01f;
         textY += stringSize.Y + 10;
@@ -499,20 +517,13 @@ public class GamePlayView : GameStateView
         );
 
         textX = m_graphics.PreferredBackBufferWidth * 0.50f;
-        textY = m_graphics.PreferredBackBufferWidth * 0.50f;
+        textY = m_graphics.PreferredBackBufferHeight * 0.50f;
 
-        Color color = m_collision switch
-        {
-            CollisionType.Terrain => Color.DarkRed,
-            CollisionType.None => Color.White,
-            CollisionType.LandingZone => Color.LightGreen,
-            _ => throw new NotImplementedException()
-        };
         m_spriteBatch.DrawString(
             m_font,
             m_collision.ToString(),
             new Vector2(textX, textY),
-            color
+            Color.White
         );
 
         m_spriteBatch.End();
@@ -531,7 +542,7 @@ public class GamePlayView : GameStateView
                 Point tr = new();
                 Point br = new();
                 Point bl = new();
-                float angle = Angle + MathHelper.PiOver2;
+                float angle = AngleXAxis + MathHelper.PiOver2;
                 float halfWidth = Width / 2;
                 float halfHeight = Height / 2;
 
@@ -557,13 +568,22 @@ public class GamePlayView : GameStateView
                 };
             }
         }
-        public Vector2 Velocity { get; set; } // Meters per Second
+        public Vector2 Velocity { get; set; } // px/ms
         public float AngVelocity { get; private set; }
         public Vector2 Direction { get; private set; } // positive y thrusts up
         private float m_rotationForce = 1.5f / 1000000f;
         private float m_thrustAccel;
-        public float Speed { get { return Velocity.Length(); } }
-        public float Angle { get { return DirectionToAngle(Direction); } } // Angle with respect to x-axis
+        public float Speed { get { return Velocity.Length(); } } // px/ms
+
+        /// <summary>
+        ///  Angle with respect to X-axis 
+        /// </summary>
+        public float AngleXAxis { get { return DirectionToAngle(Direction); } }
+        /// <summary>
+        ///  Angle with respect to Y-axis 
+        /// </summary>
+        public float AngleYAxis { get { return DirectionToAngle(new Vector2(-Direction.Y, Direction.X)); } }
+
         public bool UsingThrust { get; set; }
 
         public Lander(Vector2 initialPosition, Vector2 initialDirection, float thrustAccel)
@@ -578,7 +598,7 @@ public class GamePlayView : GameStateView
             UsingThrust = false;
             int elapsed = gameTime.ElapsedGameTime.Milliseconds;
             Position += Velocity * elapsed;
-            Direction = AngleToDirection(Angle + AngVelocity * elapsed);
+            Direction = AngleToDirection(AngleXAxis + AngVelocity * elapsed);
         }
 
         public void Thrust(GameTime gameTime, float value)

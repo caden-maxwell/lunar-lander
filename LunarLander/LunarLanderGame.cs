@@ -51,7 +51,7 @@ public class LunarLanderGame : Game
         m_states = new Dictionary<GameStateEnum, IGameState>
         {
             { GameStateEnum.MainMenu, new MainMenuView() },
-            { GameStateEnum.GamePlay, new GamePlayView(m_inputMapper, SpaceBodiesEnum.Earth) },
+            { GameStateEnum.GamePlay, new GamePlayView(m_inputMapper, SpaceBodiesEnum.Moon) },
             { GameStateEnum.HighScores, new HighScoresView() },
             { GameStateEnum.Credits, new CreditsView() },
             { GameStateEnum.Settings, new SettingsView(m_inputMapper) }
