@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace LunarLander;
 
@@ -76,9 +77,9 @@ public class GamePlayView : GameStateView
     private Vector2 m_landerStartOrientation = new(2, 1);
     private Vector2 m_landerStartPosition;
     private bool m_landerThrustApplied = false;
-    private int m_landerThrustTimer = 0;
-    private float m_safeLandingSpeed = 2; // m/s
-    private float m_safeLandingAngle = 5; // Degrees
+    private float m_landerThrustTimer = 0;
+    private const float m_safeLandingSpeed = 2; // m/s
+    private const float m_safeLandingAngle = 5; // Degrees
     private bool m_isSafeSpeed = false;
     private bool m_isSafeAngle = false;
     private enum CollisionType
@@ -89,6 +90,7 @@ public class GamePlayView : GameStateView
     }
     private CollisionType m_collision = CollisionType.None;
     private GamePlayState m_gameState = GamePlayState.Playing;
+    private float[] m_movingFPS = new float[50];
 
     public GamePlayView(InputMapper inputMapper, SpaceBodiesEnum body)
     {
@@ -312,7 +314,7 @@ public class GamePlayView : GameStateView
     {
         if (m_gameState != GamePlayState.Playing)
             return;
-        int elapsed = gameTime.ElapsedGameTime.Milliseconds;
+        float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
         m_lander.Velocity += m_gravity * elapsed;
         m_landerThrustApplied = m_lander.UsingThrust;
 
@@ -329,13 +331,17 @@ public class GamePlayView : GameStateView
         if (m_collision == CollisionType.Terrain)
             m_gameState = GamePlayState.End;
 
-        m_isSafeAngle = MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)) < 5;
-        m_isSafeSpeed = m_lander.Speed / PX_PER_METER * 1000 < 2;
+        m_isSafeAngle = MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)) < m_safeLandingAngle;
+        m_isSafeSpeed = m_lander.Speed / PX_PER_METER * 1000 < m_safeLandingSpeed;
         if (m_collision == CollisionType.LandingZone)
             if (m_isSafeSpeed && m_isSafeAngle)
                 m_gameState = GamePlayState.Win;
             else
                 m_gameState = GamePlayState.End;
+
+        for (int i = 0; i < m_movingFPS.Length; i++)
+            m_movingFPS[i] = m_movingFPS[(i + 1) % m_movingFPS.Length];
+        m_movingFPS[^1] = 1000 / elapsed;
     }
 
     private CollisionType CollisionDetector()
@@ -466,7 +472,11 @@ public class GamePlayView : GameStateView
         textX = m_graphics.PreferredBackBufferWidth * 0.01f;
         textY += stringSize.Y + 10;
 
-        double fps = 1000 / gameTime.ElapsedGameTime.TotalMilliseconds;
+        float sum = 0;
+        foreach (float num in m_movingFPS)
+            sum += num;
+        int fps = (int)sum / m_movingFPS.Length;
+
         text = $"FPS: {fps,7:0.00}";
         m_spriteBatch.DrawString(
             m_font,
