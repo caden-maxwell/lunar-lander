@@ -40,35 +40,28 @@ public class Line
     }
 
     /// <summary>
-    /// Checks whether two lines segments are intersecting. See: 
-    /// https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
+    /// Checks whether two lines segments are intersecting.<br />
+    /// <see href="https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/"/><br />
+    /// Got rid of special cases, since they are probably very unlikely to happen in this game.
     /// </summary>
-    /// <param name="line1"></param>
-    /// <param name="line2"></param>
     /// <returns></returns>
     public static bool Intersecting(Line line1, Line line2)
     {
-        static int orientation(Line line, Vector2 p)
+        static bool orientation(Line line, Vector2 point)
         {
-            Vector2 v1 = p - line.End;
-            Vector2 v2 = p - line.Start;
-            float res = Vector3.Cross(new Vector3(v1, 0), new Vector3(v2, 0)).Z;
-            if (res > 0)
-                return 1; // Clockwise
-            else if (res < 0)
-                return 2; // Counterclockwise
-            return 0; // Colinear
+            Vector2 v1 = point - line.End;
+            Vector2 v2 = point - line.Start;
+            return Vector3.Cross(new Vector3(v1, 0), new Vector3(v2, 0)).Z > 0;
         }
 
-        int o1 = orientation(line1, line2.Start);
-        int o2 = orientation(line1, line2.End);
-        int o3 = orientation(line2, line1.Start);
-        int o4 = orientation(line2, line1.End);
+        bool o1 = orientation(line1, line2.Start);
+        bool o2 = orientation(line1, line2.End);
+        bool o3 = orientation(line2, line1.Start);
+        bool o4 = orientation(line2, line1.End);
 
         if ((o1 != o2) && (o3 != o4))
             return true;
 
-        // Got rid of special cases, since they were very unlikely to happen in this game.
         return false;
     }
 }
