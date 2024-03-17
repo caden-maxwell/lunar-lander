@@ -68,7 +68,7 @@ public class GamePlayView : GameStateView
         { SpaceBodiesEnum.Pluto, 0.62f}
     };
     private const float PX_PER_METER = 4.28f * SCALE; // Approximate scale factor
-    private float GRAV_ACCEL;
+    private readonly float GRAV_ACCEL;
     private Vector2 m_gravity;
     private Texture2D m_texLander;
     private Rectangle m_rectLander = new();
@@ -90,13 +90,13 @@ public class GamePlayView : GameStateView
     }
     private CollisionType m_collision = CollisionType.None;
     private GamePlayState m_gameState = GamePlayState.Playing;
-    private float[] m_movingFPS = new float[50];
+    private int[] m_movingFPS = new int[50];
 
     public GamePlayView(InputMapper inputMapper, SpaceBodiesEnum body)
     {
         m_inputMapper = inputMapper;
         GRAV_ACCEL = m_gravAccels[body];
-        m_gravity = new(0, GRAV_ACCEL * PX_PER_METER / 1000000f); // px/ms^2
+        m_gravity = new(0, GRAV_ACCEL * PX_PER_METER / 1e6f); // px/ms^2
     }
 
     public override void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics)
@@ -140,7 +140,7 @@ public class GamePlayView : GameStateView
         m_lander = new(
             m_landerStartPosition,
             m_landerStartOrientation,
-            landerAccel * PX_PER_METER / 1000000f // px/ms^2
+            landerAccel * PX_PER_METER / 1e6f // px/ms^2
         );
 
         BuildTerrain();
@@ -339,9 +339,12 @@ public class GamePlayView : GameStateView
             else
                 m_gameState = GamePlayState.End;
 
-        for (int i = 0; i < m_movingFPS.Length; i++)
-            m_movingFPS[i] = m_movingFPS[(i + 1) % m_movingFPS.Length];
-        m_movingFPS[^1] = 1000 / elapsed;
+        if (elapsed > 0)
+        {
+            for (int i = 0; i < m_movingFPS.Length - 1; i++)
+                m_movingFPS[i] = m_movingFPS[i + 1];
+            m_movingFPS[^1] = (int)(1000 / elapsed);
+        }
     }
 
     private CollisionType CollisionDetector()
@@ -475,9 +478,9 @@ public class GamePlayView : GameStateView
         float sum = 0;
         foreach (float num in m_movingFPS)
             sum += num;
-        int fps = (int)sum / m_movingFPS.Length;
+        float fps = sum / m_movingFPS.Length;
 
-        text = $"FPS: {fps,7:0.00}";
+        text = $"FPS: {fps,7:0.}";
         m_spriteBatch.DrawString(
             m_font,
             text,
