@@ -1,32 +1,19 @@
-﻿
-using System;
+﻿using System;
+using Microsoft.Xna.Framework;
 
 namespace LunarLander.Helpers;
 
-public class RandomGen
+public class RandomGen : Random
 {
-    private readonly Random m_random = new();
-
-    public int Next()
+    public float NextRange(float low, float high)
     {
-        return m_random.Next();
+        return MathHelper.Lerp(low, high, (float)this.NextDouble());
     }
 
-    public double NextDouble()
+    public Vector2 NextUnitVector()
     {
-        return m_random.NextDouble();
-    }
-
-    public int NextRange(int low, int high)
-    {
-        int range = high - low + 1;
-        return (int)Math.Floor(m_random.NextDouble() * range) + low;
-    }
-
-    public System.Numerics.Vector2 nextCircleVector()
-    {
-        float angle = (float)(m_random.NextDouble() * 2 * Math.PI);
-        return new System.Numerics.Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
+        float angle = (float)(NextDouble() * 2 * Math.PI);
+        return new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
     }
 
     public double NextGaussian(double mean, double stdDev)
@@ -41,7 +28,6 @@ public class RandomGen
 
         double x1;
         double x2;
-        double y1;
         double z;
 
         do
@@ -52,7 +38,7 @@ public class RandomGen
         } while (z >= 1);
 
         z = Math.Sqrt(-2 * Math.Log(z) / z);
-        y1 = x1 * z;
+        double y1 = x1 * z;
         y2 = x2 * z;
 
         return mean + y1 * stdDev;

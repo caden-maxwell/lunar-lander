@@ -20,7 +20,7 @@ public class GamePlayView : GameStateView
     private int[] m_indexTriStrip;
     private List<Line> m_lines = new();
 
-    private const float SCALE = 1.4f; // Simulation scale - higher values zoom in (make things bigger)
+    private const float SCALE = 1.5f; // Simulation scale - higher values zoom in (make things bigger)
     private readonly float m_srf = MathHelper.Clamp(0.55f / SCALE, 0.45f, 0.75f); // Surface roughness factor - higher is more rough
     private readonly float m_terrainDetail = 5; // X distance between terrain vertices - higher is less detailed
     private readonly float m_pctFromEdge = 0.15f; // Percent of screen that bounds are away from window edges
@@ -74,6 +74,7 @@ public class GamePlayView : GameStateView
     private Rectangle m_rectLander = new();
     private Rectangle m_rectSpriteSource = new();
     private Lander m_lander;
+    private const float LANDER_WIDTH = 9.4f * PX_PER_METER; // Meters wide 
     private Vector2 m_landerStartOrientation = new(2, 1);
     private Vector2 m_landerStartPosition;
     private bool m_landerThrustApplied = false;
@@ -155,7 +156,7 @@ public class GamePlayView : GameStateView
 
         m_landingZones.Clear();
         float boundsWidth = m_bounds.Right - m_bounds.Left;
-        float landingZoneSize = m_graphics.PreferredBackBufferWidth * 0.05f * SCALE; // Landing Zones only 5% of total width
+        float landingZoneSize = LANDER_WIDTH * 2.5f;
         List<Line> zones = new();
         Vector2 prevEnd = new(0, m_terrainYLevel);
         for (int i = 0; i < m_numLandingZones; i++)
@@ -166,8 +167,8 @@ public class GamePlayView : GameStateView
 
             // Get random starting point somewhere in its column
             Vector2 landingZoneStart = new(
-                m_rand.NextRange((int)leftBound, (int)(rightBound - landingZoneSize)),
-                m_rand.NextRange((int)m_bounds.Top, (int)m_bounds.Bottom)
+                m_rand.NextRange(leftBound, (rightBound - landingZoneSize)),
+                m_rand.NextRange(m_bounds.Top, m_bounds.Bottom)
             );
             Vector2 landingZoneEnd = landingZoneStart + new Vector2(landingZoneSize, 0);
 
@@ -272,10 +273,9 @@ public class GamePlayView : GameStateView
 
         float aspectRatio = m_rectSpriteSource.Width / (float)m_rectSpriteSource.Height;
 
-        const float LANDER_HEIGHT = 7; // Meters tall
-        float LANDER_WIDTH = LANDER_HEIGHT / aspectRatio;
-        m_rectLander.Width = (int)(LANDER_HEIGHT * PX_PER_METER);
-        m_rectLander.Height = (int)(LANDER_WIDTH * PX_PER_METER);
+        float LANDER_HEIGHT = LANDER_WIDTH / aspectRatio;
+        m_rectLander.Width = (int)(LANDER_WIDTH);
+        m_rectLander.Height = (int)(LANDER_HEIGHT);
 
         m_lander.SetWidth(m_rectLander.Width);
         m_lander.SetHeight(m_rectLander.Height);
