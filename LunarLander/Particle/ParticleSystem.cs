@@ -19,6 +19,7 @@ public class ParticleSystem
     private readonly float m_lifetimeMean; // milliseconds
     private readonly float m_lifetimeStdDev; // milliseconds
     private readonly float m_particlesPerMS;
+    private float m_remainderParticles = 0;
 
     public ParticleSystem(Vector2 center, int sizeMean, int sizeStdDev, float speedMean, float speedStdDev, int lifetimeMean, int lifetimeStdDev, float particlePerMS)
     {
@@ -34,32 +35,41 @@ public class ParticleSystem
 
     public void ShipThrust(float elapsed, Vector2 direction)
     {
-        int numParticles = (int)(elapsed * m_particlesPerMS);
-        float angle = LunarMath.DirectionToAngle(direction);
-        angle = (float)m_random.NextGaussian(angle, MathHelper.Pi / 16);
-        float size = (float)m_random.NextGaussian(m_sizeMean, m_sizeStdDev);
-        Particle particle = new(
-            m_center,
-            LunarMath.AngleToDirection(angle),
-            (float)Math.Abs(m_random.NextGaussian(m_speedMean, m_speedStDev)),
-            new Vector2(size, size),
-            new System.TimeSpan(0, 0, 0, 0, (int)(m_random.NextGaussian(m_lifetimeMean, m_lifetimeStdDev)))
-        );
-
-        m_particles.Add(particle.name, particle);
+        m_remainderParticles += elapsed * m_particlesPerMS;
+        int numParticles = (int)m_remainderParticles;
+        for (int i = 0; i < numParticles; ++i)
+        {
+            float angle = LunarMath.DirectionToAngle(direction);
+            angle = (float)m_random.NextGaussian(angle, MathHelper.Pi / 16);
+            float size = (float)m_random.NextGaussian(m_sizeMean, m_sizeStdDev);
+            Particle particle = new(
+                m_center,
+                LunarMath.AngleToDirection(angle),
+                (float)Math.Abs(m_random.NextGaussian(m_speedMean, m_speedStDev)),
+                new Vector2(size, size),
+                new System.TimeSpan(0, 0, 0, 0, (int)(m_random.NextGaussian(m_lifetimeMean, m_lifetimeStdDev)))
+            );
+            m_particles.Add(particle.name, particle);
+        }
+        m_remainderParticles -= numParticles;
     }
 
     public void Update(GameTime gameTime)
     {
         // Update existing particles
-        List<long> removeMe = new List<long>();
+        List<long> toRemove = new();
         foreach (Particle p in m_particles.Values)
             if (!p.Update(gameTime))
-                removeMe.Add(p.name);
+                toRemove.Add(p.name);
 
         // Remove dead particles
-        foreach (long key in removeMe)
+        foreach (long key in toRemove)
             m_particles.Remove(key);
+    }
+
+    public void Clear()
+    {
+        m_particles.Clear();
     }
 
     public void SetCenter(Vector2 center)
