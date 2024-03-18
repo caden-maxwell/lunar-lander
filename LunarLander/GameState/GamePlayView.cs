@@ -20,7 +20,7 @@ public class GamePlayView : GameStateView
     private int[] m_indexTriStrip;
     private readonly List<Line> m_lines = new();
 
-    private const float SCALE = 1.5f; // Simulation scale - higher values zoom in (make things bigger)
+    private const float SCALE = 1.3f; // Simulation scale - higher values zoom in (make things bigger)
     private readonly float m_srf = MathHelper.Clamp(0.55f / SCALE, 0.45f, 0.75f); // Surface roughness factor - higher is more rough
     private readonly float m_terrainDetail = 5; // X distance between terrain vertices - higher is less detailed
     private readonly float m_pctFromEdge = 0.15f; // Percent of screen that bounds are away from window edges
@@ -186,7 +186,7 @@ public class GamePlayView : GameStateView
 
         m_landingZones.Clear();
         float boundsWidth = m_bounds.Right - m_bounds.Left;
-        float landingZoneSize = LANDER_WIDTH * 2.5f;
+        float landingZoneSize = LANDER_WIDTH * 2;
         List<Line> zones = new();
         Vector2 prevEnd = new(0, m_terrainYLevel);
         for (int i = 0; i < m_numLandingZones; i++)
