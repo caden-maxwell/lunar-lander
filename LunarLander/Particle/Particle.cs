@@ -23,8 +23,7 @@ public class Particle
         alive += gameTime.ElapsedGameTime;
 
         // Update its center
-        center.X += (float)(gameTime.ElapsedGameTime.TotalMilliseconds * speed * direction.X);
-        center.Y += (float)(gameTime.ElapsedGameTime.TotalMilliseconds * speed * direction.Y);
+        center += (float)gameTime.ElapsedGameTime.TotalMilliseconds * speed * direction;
 
         // Rotate proportional to its speed
         rotation += (speed / 16f);
@@ -38,8 +37,8 @@ public class Particle
     public Vector2 center;
     public float rotation;
     private Vector2 direction;
-    private float speed;
-    private TimeSpan lifetime;
+    private readonly float speed;
+    private readonly TimeSpan lifetime;
     private TimeSpan alive = TimeSpan.Zero;
     private static long m_nextName = 0;
 }

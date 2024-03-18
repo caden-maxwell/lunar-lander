@@ -7,7 +7,7 @@ public class RandomGen : Random
 {
     public float NextRange(float low, float high)
     {
-        return MathHelper.Lerp(low, high, (float)this.NextDouble());
+        return MathHelper.Lerp(low, high, (float)NextDouble());
     }
 
     public Vector2 NextUnitVector()
@@ -16,33 +16,34 @@ public class RandomGen : Random
         return new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
     }
 
+    private double spare;
+    private bool hasSpare = false;
+    /// <summary> See:
+    /// <see href="https://en.wikipedia.org/wiki/Marsaglia_polar_method"/>
+    /// </summary>
+    /// <param name="mean"></param>
+    /// <param name="stdDev"></param>
+    /// <returns></returns>
     public double NextGaussian(double mean, double stdDev)
     {
-        if (usePrevious)
+        if (hasSpare)
         {
-            usePrevious = false;
-            return mean + y2 * stdDev;
+            hasSpare = false;
+            return mean + spare * stdDev;
         }
 
-        usePrevious = true;
-
-        double x1;
-        double x2;
-        double z;
-
+        double u, v, s;
         do
         {
-            x1 = 2 * NextDouble() - 1;
-            x2 = 2 * NextDouble() - 1;
-            z = x1 * x1 + x2 * x2;
-        } while (z >= 1);
+            u = 2.0 * NextDouble() - 1.0;
+            v = 2.0 * NextDouble() - 1.0;
+            s = u * u + v * v;
+        } while (s >= 1.0 || s == 0);
 
-        z = Math.Sqrt(-2 * Math.Log(z) / z);
-        double y1 = x1 * z;
-        y2 = x2 * z;
+        s = Math.Sqrt(-2.0 * Math.Log(s) / s);
+        spare = v * s;
+        hasSpare = true;
 
-        return mean + y1 * stdDev;
+        return mean + stdDev * u * s;
     }
-    private bool usePrevious = false;
-    double y2;
 }
