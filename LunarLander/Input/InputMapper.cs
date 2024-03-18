@@ -25,8 +25,25 @@ public class InputMapper
     private void SetDefaultMappings()
     {
         // TODO: Get keys from persistent storage
-        KeyboardMappings.Add(ActionEnum.Thrust, Keys.Space);
-        KeyboardMappings.Add(ActionEnum.RotateCounterClockwise, Keys.A);
-        KeyboardMappings.Add(ActionEnum.RotateClockwise, Keys.D);
+        SetThrust(Keys.Space);
+        SetRotateCounterClockwise(Keys.A);
+        SetRotateClockwise(Keys.D);
+    }
+
+    public void SetThrust(Keys key)
+    {
+        KeyboardMappings.Remove(ActionEnum.Thrust);
+        KeyboardMappings.Add(ActionEnum.Thrust, key);
+    }
+
+    public void SetRotateCounterClockwise(Keys key)
+    {
+        KeyboardMappings.Remove(ActionEnum.RotateCounterClockwise);
+        KeyboardMappings.Add(ActionEnum.RotateCounterClockwise, key);
+    }
+    public void SetRotateClockwise(Keys key)
+    {
+        KeyboardMappings.Remove(ActionEnum.RotateClockwise);
+        KeyboardMappings.Add(ActionEnum.RotateClockwise, key);
     }
 }
