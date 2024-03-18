@@ -3,13 +3,15 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
+using System.Collections.Generic;
 
 namespace LunarLander;
 
 public class MainMenuView : GameStateView
 {
     private SpriteFont m_fontMenu;
-    private SpriteFont m_fontMenuSelect;
+    private SpriteFont m_fontMenuHover;
 
     public override GameStateEnum State { get; } = GameStateEnum.MainMenu;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.MainMenu;
@@ -26,12 +28,12 @@ public class MainMenuView : GameStateView
 
     private MenuState m_currentSelection = MenuState.NewGame;
 
-    public override void RegisterKeys(IInputDevice inputDevice)
+    public override void RegisterKeys()
     {
-        inputDevice.RegisterCommand(Keys.Down, true, new CommandDelegate(SelectBelow));
-        inputDevice.RegisterCommand(Keys.Up, true, new CommandDelegate(SelectAbove));
-        inputDevice.RegisterCommand(Keys.Enter, true, new CommandDelegate(EnterPressed));
-        inputDevice.RegisterCommand(Keys.Escape, true, new CommandDelegate(EscPressed));
+        m_inputDevice.RegisterCommand(Keys.Down, true, new CommandDelegate(SelectBelow));
+        m_inputDevice.RegisterCommand(Keys.Up, true, new CommandDelegate(SelectAbove));
+        m_inputDevice.RegisterCommand(Keys.Enter, true, new CommandDelegate(EnterPressed));
+        m_inputDevice.RegisterCommand(Keys.Escape, true, new CommandDelegate(EscPressed));
     }
 
     public override void Reload() { }
@@ -39,7 +41,7 @@ public class MainMenuView : GameStateView
     public override void LoadContent(ContentManager contentManager)
     {
         m_fontMenu = contentManager.Load<SpriteFont>("Fonts/menu");
-        m_fontMenuSelect = contentManager.Load<SpriteFont>("Fonts/menu-select");
+        m_fontMenuHover = contentManager.Load<SpriteFont>("Fonts/menu-hover");
     }
 
     public override void Update(GameTime gameTime) { }
@@ -48,18 +50,25 @@ public class MainMenuView : GameStateView
     {
         m_spriteBatch.Begin();
 
-        // I split the first one's parameters on separate lines to help you see them better
-        float bottom = DrawMenuItem(
-            m_currentSelection == MenuState.NewGame ? m_fontMenuSelect : m_fontMenu,
-            "New Game",
-            200,
-            m_currentSelection == MenuState.NewGame ? Color.Yellow : Color.Blue
-        );
+        Dictionary<string, MenuState> keyValuePairs = new Dictionary<string, MenuState>()
+        {
+            { "New Game", MenuState.NewGame },
+            { "High Scores", MenuState.HighScores },
+            { "Settings", MenuState.Settings },
+            { "Credits", MenuState.Credits },
+            { "Quit", MenuState.Quit },
+        };
 
-        bottom = DrawMenuItem(m_currentSelection == MenuState.HighScores ? m_fontMenuSelect : m_fontMenu, "High Scores", bottom, m_currentSelection == MenuState.HighScores ? Color.Yellow : Color.Blue);
-        bottom = DrawMenuItem(m_currentSelection == MenuState.Settings ? m_fontMenuSelect : m_fontMenu, "Settings", bottom, m_currentSelection == MenuState.Settings ? Color.Yellow : Color.Blue);
-        bottom = DrawMenuItem(m_currentSelection == MenuState.Credits ? m_fontMenuSelect : m_fontMenu, "Credits", bottom, m_currentSelection == MenuState.Credits ? Color.Yellow : Color.Blue);
-        DrawMenuItem(m_currentSelection == MenuState.Quit ? m_fontMenuSelect : m_fontMenu, "Quit", bottom, m_currentSelection == MenuState.Quit ? Color.Yellow : Color.Blue);
+        float top = m_graphics.PreferredBackBufferHeight * 0.3f;
+        foreach (KeyValuePair<string, MenuState> entry in keyValuePairs)
+        {
+            top = DrawMenuItem(
+                m_currentSelection == entry.Value ? m_fontMenuHover : m_fontMenu,
+                entry.Key,
+                top,
+                m_currentSelection == entry.Value ? Color.MediumBlue : Color.White
+            );
+        }
 
         m_spriteBatch.End();
     }
@@ -70,8 +79,16 @@ public class MainMenuView : GameStateView
         m_spriteBatch.DrawString(
             font,
             text,
+            new Vector2(m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2 + 2, y + 2),
+            Color.Black
+        );
+
+        m_spriteBatch.DrawString(
+            font,
+            text,
             new Vector2(m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2, y),
-            color);
+            color
+        );
 
         return y + stringSize.Y;
     }
@@ -92,24 +109,17 @@ public class MainMenuView : GameStateView
 
     private void EnterPressed(GameTime gameTime, float value)
     {
-        switch (m_currentSelection)
+        GameStateEnum state = m_currentSelection switch
         {
-            case MenuState.NewGame:
-                ChangeState(GameStateEnum.GamePlay);
-                break;
-            case MenuState.HighScores:
-                ChangeState(GameStateEnum.HighScores);
-                break;
-            case MenuState.Credits:
-                ChangeState(GameStateEnum.Credits);
-                break;
-            case MenuState.Settings:
-                ChangeState(GameStateEnum.Settings);
-                break;
-            case MenuState.Quit:
-                ChangeState(GameStateEnum.Exit);
-                break;
-        }
+            MenuState.NewGame => GameStateEnum.GamePlay,
+            MenuState.HighScores => GameStateEnum.HighScores,
+            MenuState.Credits => GameStateEnum.Credits,
+            MenuState.Settings => GameStateEnum.Settings,
+            MenuState.Quit => GameStateEnum.Exit,
+            _ => throw new NotImplementedException()
+        };
+
+        ChangeState(state);
     }
 
     public override void EscPressed(GameTime gameTime, float value)

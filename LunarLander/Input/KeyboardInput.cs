@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using Microsoft.Xna.Framework;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace LunarLander.Input;
 
@@ -26,6 +27,13 @@ public class KeyboardInput : IInputDevice
     {
         m_commandEntries.Clear();
     }
+
+    public void GetNextInput(InputCallbackDelegate callback)
+    {
+        m_inputCallbacks.Enqueue(callback);
+    }
+
+    private readonly Queue<InputCallbackDelegate> m_inputCallbacks = new();
 
     /// <summary>
     /// Track all registered commands in this dictionary
@@ -56,16 +64,26 @@ public class KeyboardInput : IInputDevice
     public void Update(GameTime gameTime)
     {
         KeyboardState state = Keyboard.GetState();
-        foreach (CommandEntry entry in this.m_commandEntries.Values)
+        foreach (CommandEntry entry in m_commandEntries.Values)
         {
-            if (entry.keyPressOnly && KeyPressed(entry.key))
+            if (entry.keyPressOnly && KeyPressed(state, entry.key))
                 entry.callback(gameTime, 1.0f);
             else if (!entry.keyPressOnly && state.IsKeyDown(entry.key))
                 entry.callback(gameTime, 1.0f);
         }
 
-        //
-        // Move the current state to the previous state for the next time around
+        Keys key = Keys.None;
+        if (m_inputCallbacks.Count > 0)
+        {
+            List<Keys> keysDiff = KeyDifference(state.GetPressedKeys());
+            if (keysDiff.Count > 0)
+                key = keysDiff[0];
+
+            if (key != Keys.None)
+                while (m_inputCallbacks.Count > 0)
+                    m_inputCallbacks.Dequeue()(key);
+        }
+
         m_statePrevious = state;
     }
 
@@ -74,9 +92,20 @@ public class KeyboardInput : IInputDevice
     /// <summary>
     /// Checks to see if a key was newly pressed
     /// </summary>
-    private bool KeyPressed(Keys key)
+    private bool KeyPressed(KeyboardState state, Keys key)
     {
-        return (Keyboard.GetState().IsKeyDown(key) && !m_statePrevious.IsKeyDown(key));
+        return (state.IsKeyDown(key) && !m_statePrevious.IsKeyDown(key));
+    }
+
+    private List<Keys> KeyDifference(Keys[] newKeys)
+    {
+        List<Keys> difference = new();
+        Keys[] oldKeys = m_statePrevious.GetPressedKeys();
+        foreach (Keys key in newKeys)
+            if (!oldKeys.Contains(key))
+                difference.Add(key);
+
+        return difference;
     }
 
     public override string ToString()

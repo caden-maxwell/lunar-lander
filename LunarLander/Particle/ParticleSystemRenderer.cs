@@ -21,6 +21,8 @@ public class ParticleSystemRenderer
 
     public void Render(SpriteBatch spriteBatch, ParticleSystem system)
     {
+        spriteBatch.Begin(blendState: BlendState.Additive);
+
         Rectangle rect = new(0, 0, 0, 0);
         Vector2 centerTexture = new(m_texParticle.Width / 2, m_texParticle.Height / 2);
         foreach (Particle particle in system.Particles)
@@ -41,5 +43,7 @@ public class ParticleSystemRenderer
                 0
             );
         }
+
+        spriteBatch.End();
     }
 }

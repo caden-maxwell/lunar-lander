@@ -14,16 +14,18 @@ public abstract class GameStateView : IGameState
     public abstract GameStateEnum State { get; }
     public abstract GameStateEnum NextState { get; set; }
     protected bool m_stateChanged = false;
+    protected IInputDevice m_inputDevice;
 
-    public virtual void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics)
+    public virtual void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics, IInputDevice inputDevice)
     {
         m_graphics = graphics;
         m_spriteBatch = new(graphicsDevice);
+        m_inputDevice = inputDevice;
     }
 
-    public virtual void RegisterKeys(IInputDevice inputDevice)
+    public virtual void RegisterKeys()
     {
-        inputDevice.RegisterCommand(Keys.Escape, true, new CommandDelegate(EscPressed));
+        m_inputDevice.RegisterCommand(Keys.Escape, true, new CommandDelegate(EscPressed));
     }
 
     public abstract void Reload();
