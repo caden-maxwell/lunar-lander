@@ -38,5 +38,8 @@ public class SettingsView : GameStateView
         m_spriteBatch.End();
     }
 
-    public override void Update(GameTime gameTime) { }
+    public override void Update(GameTime gameTime)
+    {
+        
+    }
 }
