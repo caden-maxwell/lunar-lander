@@ -1,11 +1,11 @@
 ﻿using LunarLander.Helpers;
 using LunarLander.Input;
+using LunarLander.Particle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace LunarLander;
 
@@ -18,7 +18,7 @@ public class GamePlayView : GameStateView
 
     private VertexPositionColor[] m_vertsTriStrip;
     private int[] m_indexTriStrip;
-    private List<Line> m_lines = new();
+    private readonly List<Line> m_lines = new();
 
     private const float SCALE = 1.5f; // Simulation scale - higher values zoom in (make things bigger)
     private readonly float m_srf = MathHelper.Clamp(0.55f / SCALE, 0.45f, 0.75f); // Surface roughness factor - higher is more rough
@@ -36,7 +36,7 @@ public class GamePlayView : GameStateView
 
     private int m_level = 1;
     private int m_numLandingZones = 2;
-    private List<Line> m_landingZones = new();
+    private readonly List<Line> m_landingZones = new();
     private enum GamePlayState
     {
         Transition,
@@ -52,7 +52,7 @@ public class GamePlayView : GameStateView
     public override GameStateEnum State { get; } = GameStateEnum.GamePlay;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.GamePlay;
 
-    private Dictionary<SpaceBodiesEnum, float> m_gravAccels = new()
+    private readonly Dictionary<SpaceBodiesEnum, float> m_gravAccels = new()
     {
         { SpaceBodiesEnum.Sun, 274},
         { SpaceBodiesEnum.Mercury, 3.70f},
@@ -74,6 +74,10 @@ public class GamePlayView : GameStateView
     private Rectangle m_rectLander = new();
     private Rectangle m_rectSpriteSource = new();
     private Lander m_lander;
+    private ParticleSystem m_particleSystemFire;
+    private ParticleSystemRenderer m_renderFire;
+    private ParticleSystem m_particleSystemSmoke;
+    private ParticleSystemRenderer m_renderSmoke;
     private const float LANDER_WIDTH = 9.4f * PX_PER_METER; // Meters wide 
     private Vector2 m_landerStartOrientation = new(2, 1);
     private Vector2 m_landerStartPosition;
@@ -138,11 +142,28 @@ public class GamePlayView : GameStateView
         );
 
         float landerAccel = 15f; // m/s^2
+        landerAccel = landerAccel * PX_PER_METER / 1e6f; // px/ms^2
         m_lander = new(
             m_landerStartPosition,
             m_landerStartOrientation,
-            landerAccel * PX_PER_METER / 1e6f // px/ms^2
+            landerAccel
         );
+
+        m_particleSystemFire = new ParticleSystem(
+            new Vector2(0, 0),
+            10, 5,
+            landerAccel * 10000, landerAccel * 10000 * 0.5f, // Make fire velocity proportional to thrust
+            8, 10
+        );
+        m_renderFire = new ParticleSystemRenderer("Images/fire");
+
+        m_particleSystemSmoke = new ParticleSystem(
+            new Vector2(0, 0),
+            5, 10,
+            0.01f, 0.05f,
+            2000, 400
+        );
+        m_renderSmoke = new ParticleSystemRenderer("Images/smoke");
 
         BuildTerrain();
     }
@@ -279,6 +300,9 @@ public class GamePlayView : GameStateView
 
         m_lander.SetWidth(m_rectLander.Width);
         m_lander.SetHeight(m_rectLander.Height);
+
+        m_renderFire.LoadContent(contentManager);
+        m_renderSmoke.LoadContent(contentManager);
     }
 
     public override void Reload()
@@ -287,6 +311,7 @@ public class GamePlayView : GameStateView
         BuildTerrain();
         m_collision = CollisionType.None;
         m_gameState = GamePlayState.Playing;
+        m_lander.Destroyed = false;
     }
 
     public override void RegisterKeys(IInputDevice inputDevice)
@@ -312,32 +337,49 @@ public class GamePlayView : GameStateView
 
     public override void Update(GameTime gameTime)
     {
-        if (m_gameState != GamePlayState.Playing)
-            return;
         float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
-        m_lander.Velocity += m_gravity * elapsed;
-        m_landerThrustApplied = m_lander.UsingThrust;
 
-        m_landerThrustTimer = m_landerThrustApplied ?
-            m_landerThrustTimer + elapsed :
-            m_landerThrustTimer - 2 * elapsed;
-        m_landerThrustTimer = MathHelper.Clamp(m_landerThrustTimer, 0, 501);
-        m_landerThrustTimer %= 500;
+        if (m_gameState == GamePlayState.Playing)
+        {
+            m_lander.Velocity += m_gravity * elapsed;
+            m_landerThrustApplied = m_lander.UsingThrust;
 
-        m_lander.Update(gameTime);
-        m_rectLander.Location = m_lander.Position.ToPoint();
+            m_landerThrustTimer = m_landerThrustApplied ?
+                m_landerThrustTimer + elapsed :
+                m_landerThrustTimer - 2 * elapsed;
+            m_landerThrustTimer = MathHelper.Clamp(m_landerThrustTimer, 0, 501);
+            m_landerThrustTimer %= 500;
 
-        m_collision = CollisionDetector();
-        if (m_collision == CollisionType.Terrain)
-            m_gameState = GamePlayState.End;
+            m_lander.Update(gameTime);
 
-        m_isSafeAngle = MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)) < m_safeLandingAngle;
-        m_isSafeSpeed = m_lander.Speed / PX_PER_METER * 1000 < m_safeLandingSpeed;
-        if (m_collision == CollisionType.LandingZone)
-            if (m_isSafeSpeed && m_isSafeAngle)
-                m_gameState = GamePlayState.Win;
-            else
+            m_rectLander.Location = m_lander.Position.ToPoint();
+
+            m_collision = CollisionDetector();
+            if (m_collision == CollisionType.Terrain)
+                m_lander.Destroyed = true;
+
+            m_isSafeAngle = MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)) < m_safeLandingAngle;
+            m_isSafeSpeed = m_lander.Speed / PX_PER_METER * 1000 < m_safeLandingSpeed;
+            if (m_collision == CollisionType.LandingZone)
+                if (m_isSafeSpeed && m_isSafeAngle)
+                    m_gameState = GamePlayState.Win;
+                else
+                    m_lander.Destroyed = true;
+
+            if (m_lander.Destroyed)
                 m_gameState = GamePlayState.End;
+
+            if (m_landerThrustApplied)
+            {
+                m_particleSystemFire.ShipThrust(elapsed, -m_lander.Direction);
+                m_particleSystemSmoke.ShipThrust(elapsed, -m_lander.Direction);
+            }
+
+            Line bottomLine = new(m_lander.Corners[2].ToVector2(), m_lander.Corners[3].ToVector2());
+            Vector2 thrustPoint = bottomLine.Split().Item1.End;
+            m_particleSystemFire.SetCenter(thrustPoint);
+            m_particleSystemSmoke.SetCenter(thrustPoint);
+        }
 
         if (elapsed > 0)
         {
@@ -345,6 +387,9 @@ public class GamePlayView : GameStateView
                 m_movingFPS[i] = m_movingFPS[i + 1];
             m_movingFPS[^1] = (int)(1000 / elapsed);
         }
+
+        m_particleSystemFire.Update(gameTime);
+        m_particleSystemSmoke.Update(gameTime);
     }
 
     private CollisionType CollisionDetector()
@@ -369,7 +414,7 @@ public class GamePlayView : GameStateView
 
     public override void Render(GameTime gameTime)
     {
-        m_spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        m_spriteBatch.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.Additive);
 
         m_graphics.GraphicsDevice.RasterizerState = m_rasterizerState;
         foreach (EffectPass pass in m_effect.CurrentTechnique.Passes)
@@ -509,6 +554,9 @@ public class GamePlayView : GameStateView
             Color.White
         );
 
+        m_renderFire.Render(m_spriteBatch, m_particleSystemFire);
+        m_renderSmoke.Render(m_spriteBatch, m_particleSystemSmoke);
+
         m_spriteBatch.End();
     }
 
@@ -554,20 +602,21 @@ public class GamePlayView : GameStateView
         public Vector2 Velocity { get; set; } // px/ms
         public float AngVelocity { get; private set; }
         public Vector2 Direction { get; private set; } // positive y thrusts up
-        private float m_rotationForce = 1.5f / 1000000f;
-        private float m_thrustAccel;
+        private readonly float m_rotationForce = 1.5f / 1e6f;
+        private readonly float m_thrustAccel;
         public float Speed { get { return Velocity.Length(); } } // px/ms
 
         /// <summary>
         ///  Angle with respect to X-axis 
         /// </summary>
-        public float AngleXAxis { get { return DirectionToAngle(Direction); } }
+        public float AngleXAxis { get { return LunarMath.DirectionToAngle(Direction); } }
         /// <summary>
         ///  Angle with respect to Y-axis 
         /// </summary>
-        public float AngleYAxis { get { return DirectionToAngle(new Vector2(-Direction.Y, Direction.X)); } }
+        public float AngleYAxis { get { return LunarMath.DirectionToAngle(new Vector2(-Direction.Y, Direction.X)); } }
 
         public bool UsingThrust { get; set; }
+        public bool Destroyed { get; set; }
 
         public Lander(Vector2 initialPosition, Vector2 initialDirection, float thrustAccel)
         {
@@ -579,14 +628,16 @@ public class GamePlayView : GameStateView
         public void Update(GameTime gameTime)
         {
             UsingThrust = false;
-            int elapsed = gameTime.ElapsedGameTime.Milliseconds;
+            float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             Position += Velocity * elapsed;
-            Direction = AngleToDirection(AngleXAxis + AngVelocity * elapsed);
+            Direction = LunarMath.AngleToDirection(AngleXAxis + AngVelocity * elapsed);
         }
 
         public void Thrust(GameTime gameTime, float value)
         {
-            int elapsed = gameTime.ElapsedGameTime.Milliseconds;
+            if (Destroyed) return;
+
+            float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             Velocity += m_thrustAccel * Direction * elapsed;
             AngVelocity -= AngVelocity * 0.001f * elapsed;
             UsingThrust = true;
@@ -594,24 +645,14 @@ public class GamePlayView : GameStateView
 
         public void Rotate(GameTime gameTime, float value, bool clockwise)
         {
-            float elapsed = gameTime.ElapsedGameTime.Milliseconds;
+            if (Destroyed) return;
+
+            float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             float changeVel = m_rotationForce * elapsed;
             if (clockwise)
                 AngVelocity += changeVel;
             else
                 AngVelocity -= changeVel;
-        }
-
-        public static Vector2 AngleToDirection(float angle)
-        {
-            return new Vector2(
-              (float)Math.Cos(angle),
-              (float)Math.Sin(angle)
-            );
-        }
-        public static float DirectionToAngle(Vector2 Direction)
-        {
-            return (float)Math.Atan2(Direction.Y, Direction.X);
         }
 
         public void SetWidth(int width)
