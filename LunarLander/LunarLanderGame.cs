@@ -45,7 +45,7 @@ public class LunarLanderGame : Game
     {
         m_graphics.PreferredBackBufferWidth = 1600;
         m_graphics.PreferredBackBufferHeight = 900;
-        m_graphics.SynchronizeWithVerticalRetrace = false;
+        //m_graphics.SynchronizeWithVerticalRetrace = false; // Uncomment for truly uncapped framerate
 
         m_graphics.ApplyChanges();
 
