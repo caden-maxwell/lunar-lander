@@ -151,17 +151,19 @@ public class GamePlayView : GameStateView
 
         m_particleSystemFire = new ParticleSystem(
             new Vector2(0, 0),
-            10, 5,
+            5, 5,
             landerAccel * 10000, landerAccel * 10000 * 0.5f, // Make fire velocity proportional to thrust
-            8, 10
+            8, 10,
+            1000
         );
         m_renderFire = new ParticleSystemRenderer("Images/fire");
 
         m_particleSystemSmoke = new ParticleSystem(
             new Vector2(0, 0),
-            5, 10,
-            0.01f, 0.05f,
-            2000, 400
+            20, 20,
+            0.05f, 0.05f,
+            2000, 400,
+            0.05f
         );
         m_renderSmoke = new ParticleSystemRenderer("Images/smoke");
 
@@ -311,7 +313,8 @@ public class GamePlayView : GameStateView
         BuildTerrain();
         m_collision = CollisionType.None;
         m_gameState = GamePlayState.Playing;
-        m_lander.Destroyed = false;
+        m_particleSystemFire.Clear();
+        m_particleSystemSmoke.Clear();
     }
 
     public override void RegisterKeys(IInputDevice inputDevice)
@@ -362,10 +365,12 @@ public class GamePlayView : GameStateView
             m_isSafeSpeed = m_lander.Speed / PX_PER_METER * 1000 < m_safeLandingSpeed;
             if (m_collision == CollisionType.LandingZone)
                 if (m_isSafeSpeed && m_isSafeAngle)
-                    m_gameState = GamePlayState.Win;
+                    m_lander.Landed = true;
                 else
                     m_lander.Destroyed = true;
 
+            if (m_lander.Landed)
+                m_gameState = GamePlayState.Win;
             if (m_lander.Destroyed)
                 m_gameState = GamePlayState.End;
 
@@ -517,8 +522,6 @@ public class GamePlayView : GameStateView
             new Vector2(textX, textY),
             m_isSafeAngle ? Color.LightGreen : Color.White
         );
-        textX = m_graphics.PreferredBackBufferWidth * 0.01f;
-        textY += stringSize.Y + 10;
 
         float sum = 0;
         foreach (float num in m_movingFPS)
@@ -526,6 +529,10 @@ public class GamePlayView : GameStateView
         float fps = sum / m_movingFPS.Length;
 
         text = $"FPS: {fps,7:0.}";
+        stringSize = m_font.MeasureString(text);
+        textX = (int)(m_graphics.PreferredBackBufferWidth * 0.99) - stringSize.X;
+        textY = m_graphics.PreferredBackBufferHeight * 0.01f;
+
         m_spriteBatch.DrawString(
             m_font,
             text,
@@ -617,6 +624,7 @@ public class GamePlayView : GameStateView
 
         public bool UsingThrust { get; set; }
         public bool Destroyed { get; set; }
+        public bool Landed { get; set; }
 
         public Lander(Vector2 initialPosition, Vector2 initialDirection, float thrustAccel)
         {
@@ -635,7 +643,7 @@ public class GamePlayView : GameStateView
 
         public void Thrust(GameTime gameTime, float value)
         {
-            if (Destroyed) return;
+            if (Destroyed || Landed) return;
 
             float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             Velocity += m_thrustAccel * Direction * elapsed;
@@ -645,7 +653,7 @@ public class GamePlayView : GameStateView
 
         public void Rotate(GameTime gameTime, float value, bool clockwise)
         {
-            if (Destroyed) return;
+            if (Destroyed || Landed) return;
 
             float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             float changeVel = m_rotationForce * elapsed;
@@ -666,6 +674,8 @@ public class GamePlayView : GameStateView
 
         public void Reset(Vector2 position, Vector2 direction)
         {
+            Destroyed = false;
+            Landed = false;
             Position = position;
             Velocity = new(0, 0);
             AngVelocity = 0;
