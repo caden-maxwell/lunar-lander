@@ -45,6 +45,7 @@ public class LunarLanderGame : Game
     {
         m_graphics.PreferredBackBufferWidth = 1920;
         m_graphics.PreferredBackBufferHeight = 1080;
+        m_graphics.SynchronizeWithVerticalRetrace = false;
 
         m_graphics.ApplyChanges();
 
