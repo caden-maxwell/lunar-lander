@@ -14,8 +14,8 @@ public enum ActionEnum
 
 public class InputMapper
 {
-    public Dictionary<ActionEnum, Keys> KeyboardMappings { get; set; } = new();
-    public Dictionary<ActionEnum, Buttons> ControllerMappings { get; set; } = new();
+    public Dictionary<ActionEnum, Keys> KeyboardMappings { get; private set; } = new();
+    public Dictionary<ActionEnum, Buttons> ControllerMappings { get; private set; } = new();
 
     public InputMapper()
     {

@@ -15,6 +15,7 @@ public class GamePlayView : GameStateView
     private SpriteFont m_fontBig;
     private BasicEffect m_effect;
     private RasterizerState m_rasterizerState;
+    private SpriteBatch m_particleSpriteBatch;
 
     private VertexPositionColor[] m_vertsTriStrip;
     private int[] m_indexTriStrip;
@@ -70,6 +71,7 @@ public class GamePlayView : GameStateView
     private const float PX_PER_METER = 4.28f * SCALE; // Approximate scale factor
     private readonly float GRAV_ACCEL;
     private Vector2 m_gravity;
+    private Texture2D m_backgroundTex;
     private Texture2D m_landerTex;
     private Rectangle m_landerRect = new();
     private Rectangle m_rectSpriteSource = new();
@@ -104,15 +106,17 @@ public class GamePlayView : GameStateView
         m_gravity = new(0, ScaleNumber(GRAV_ACCEL, MeasurementType.Acceleration));
     }
 
-    public override void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics)
+    public override void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics, IInputDevice m_inputDevice)
     {
-        base.Initialize(graphicsDevice, graphics);
+        base.Initialize(graphicsDevice, graphics, m_inputDevice);
+
+        m_particleSpriteBatch = new(graphicsDevice);
 
         m_rasterizerState = new RasterizerState
         {
             FillMode = FillMode.Solid,
             CullMode = CullMode.CullCounterClockwiseFace,
-            MultiSampleAntiAlias = true
+            MultiSampleAntiAlias = true,
         };
 
         m_effect = new BasicEffect(m_graphics.GraphicsDevice)
@@ -148,7 +152,7 @@ public class GamePlayView : GameStateView
             landerAccel
         );
 
-        m_particleSystemFire = new ParticleSystem(1000);
+        m_particleSystemFire = new ParticleSystem(500);
         m_renderFire = new ParticleSystemRenderer("Images/fire");
 
         m_particleSystemSmoke = new ParticleSystem(0.05f);
@@ -237,8 +241,8 @@ public class GamePlayView : GameStateView
         int lineIdx;
         float x;
         float y;
-        Color topColor = new(0x89, 0x89, 0x89);
-        Color bottomColor = new(0x49, 0x49, 0x49);
+        Color topColor = Color.DarkOrange;
+        Color bottomColor = Color.DarkRed;
         for (lineIdx = 0; lineIdx < m_lines.Count; lineIdx++)
         {
             x = m_lines[lineIdx].Start.X;
@@ -298,6 +302,7 @@ public class GamePlayView : GameStateView
         m_font = contentManager.Load<SpriteFont>("Fonts/stats");
         m_fontBig = contentManager.Load<SpriteFont>("Fonts/stats-big");
         m_landerTex = contentManager.Load<Texture2D>("Images/lander");
+        m_backgroundTex = contentManager.Load<Texture2D>("Images/gargantua");
         m_rectSpriteSource.Width = m_landerTex.Width / 3;
         m_rectSpriteSource.Height = m_landerTex.Height;
 
@@ -324,21 +329,21 @@ public class GamePlayView : GameStateView
         m_particleSystemSmoke.Clear();
     }
 
-    public override void RegisterKeys(IInputDevice inputDevice)
+    public override void RegisterKeys()
     {
-        base.RegisterKeys(inputDevice);
+        base.RegisterKeys();
 
-        inputDevice.RegisterCommand(
+        m_inputDevice.RegisterCommand(
             m_inputMapper.KeyboardMappings[ActionEnum.Thrust],
             false,
             new CommandDelegate(m_lander.Thrust)
         );
-        inputDevice.RegisterCommand(
+        m_inputDevice.RegisterCommand(
             m_inputMapper.KeyboardMappings[ActionEnum.RotateClockwise],
             false,
             new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, true))
         );
-        inputDevice.RegisterCommand(
+        m_inputDevice.RegisterCommand(
             m_inputMapper.KeyboardMappings[ActionEnum.RotateCounterClockwise],
             false,
             new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, false))
@@ -456,9 +461,20 @@ public class GamePlayView : GameStateView
 
     public override void Render(GameTime gameTime)
     {
-        m_spriteBatch.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.Additive);
+        m_spriteBatch.Begin();
+
+        Rectangle rect = new(0, 0, m_graphics.PreferredBackBufferWidth, m_graphics.PreferredBackBufferHeight);
+        m_spriteBatch.Draw(
+            m_backgroundTex,
+            rect,
+            null,
+            Color.White
+        );
+
+        m_spriteBatch.End();
 
         m_graphics.GraphicsDevice.RasterizerState = m_rasterizerState;
+
         foreach (EffectPass pass in m_effect.CurrentTechnique.Passes)
         {
             pass.Apply();
@@ -473,6 +489,8 @@ public class GamePlayView : GameStateView
                 2 * (m_lines.Count - 1)
             );
         }
+
+        m_spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
         m_rectSpriteSource.X = 0;
         if (m_landerThrustTimer > 250)
@@ -582,8 +600,8 @@ public class GamePlayView : GameStateView
 
         text = m_gameState switch
         {
-            GamePlayState.Win => "HOORAYYYY!!!!!",
-            GamePlayState.End => "BOOOOO!!!!",
+            GamePlayState.Win => "HOORAYYYY!!!!! :)",
+            GamePlayState.End => "MISSION FAILED :(",
             GamePlayState.Playing => "",
             GamePlayState.Transition => throw new NotImplementedException(),
             GamePlayState.Paused => throw new NotImplementedException(),
@@ -598,10 +616,11 @@ public class GamePlayView : GameStateView
             Color.White
         );
 
-        m_renderFire.Render(m_spriteBatch, m_particleSystemFire);
-        m_renderSmoke.Render(m_spriteBatch, m_particleSystemSmoke);
 
         m_spriteBatch.End();
+
+        m_renderFire.Render(m_particleSpriteBatch, m_particleSystemFire);
+        m_renderSmoke.Render(m_particleSpriteBatch, m_particleSystemSmoke);
     }
 
     private class Lander
@@ -672,7 +691,8 @@ public class GamePlayView : GameStateView
 
         public void Update(GameTime gameTime)
         {
-            if (Destroyed || Landed) return;
+            if (Destroyed || Landed)
+                return;
 
             float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             Position += Velocity * elapsed;
@@ -682,7 +702,8 @@ public class GamePlayView : GameStateView
 
         public void Thrust(GameTime gameTime, float value)
         {
-            if (Destroyed || Landed) return;
+            if (Destroyed || Landed)
+                return;
 
             float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             Velocity += ThrustAccel * Direction * elapsed;
@@ -692,7 +713,8 @@ public class GamePlayView : GameStateView
 
         public void Rotate(GameTime gameTime, float value, bool clockwise)
         {
-            if (Destroyed || Landed) return;
+            if (Destroyed || Landed)
+                return;
 
             float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             float changeVel = m_rotationForce * elapsed;
