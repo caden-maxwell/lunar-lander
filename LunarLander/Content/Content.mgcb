@@ -13,6 +13,24 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Audio/clapping.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/clapping.wav
+
+#begin Audio/enginehum.mp3
+/importer:Mp3Importer
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/enginehum.mp3
+
+#begin Audio/explosion.mp3
+/importer:Mp3Importer
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/explosion.mp3
+
 #begin Fonts/menu-hover.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor

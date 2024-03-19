@@ -2,6 +2,7 @@
 using LunarLander.Input;
 using LunarLander.Particle;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -71,6 +72,7 @@ public class GamePlayView : GameStateView
     private const float PX_PER_METER = 4.28f * SCALE; // Approximate scale factor
     private readonly float GRAV_ACCEL;
     private Vector2 m_gravity;
+
     private Texture2D m_backgroundTex;
     private Texture2D m_landerTex;
     private Rectangle m_landerRect = new();
@@ -80,11 +82,17 @@ public class GamePlayView : GameStateView
     private ParticleSystemRenderer m_renderFire;
     private ParticleSystem m_particleSystemSmoke;
     private ParticleSystemRenderer m_renderSmoke;
+
+    private SoundEffectInstance m_engineSound;
+    private SoundEffectInstance m_explosionSound;
+    private SoundEffectInstance m_clappingSound;
+
     private const float LANDER_WIDTH = 9.4f * PX_PER_METER; // Meters wide 
     private Vector2 m_landerStartOrientation = new(2, 1);
     private Vector2 m_landerStartPosition;
     private bool m_landerThrustApplied = false;
     private float m_landerThrustTimer = 0;
+    private const float m_maxThrustTimer = 500; // ms
     private const float m_safeLandingSpeed = 2; // m/s
     private const float m_safeLandingAngle = 5; // Degrees
     private bool m_isSafeSpeed = false;
@@ -97,7 +105,7 @@ public class GamePlayView : GameStateView
     }
     private CollisionType m_collision = CollisionType.None;
     private GamePlayState m_gameState = GamePlayState.Playing;
-    private int[] m_movingFPS = new int[50];
+    private readonly int[] m_movingFPS = new int[50];
 
     public GamePlayView(InputMapper inputMapper, SpaceBodiesEnum body)
     {
@@ -299,10 +307,14 @@ public class GamePlayView : GameStateView
 
     public override void LoadContent(ContentManager contentManager)
     {
+        // Fonts
         m_font = contentManager.Load<SpriteFont>("Fonts/stats");
         m_fontBig = contentManager.Load<SpriteFont>("Fonts/stats-big");
+
+        // Textures
         m_landerTex = contentManager.Load<Texture2D>("Images/lander");
         m_backgroundTex = contentManager.Load<Texture2D>("Images/gargantua");
+
         m_rectSpriteSource.Width = m_landerTex.Width / 3;
         m_rectSpriteSource.Height = m_landerTex.Height;
 
@@ -317,6 +329,15 @@ public class GamePlayView : GameStateView
 
         m_renderFire.LoadContent(contentManager);
         m_renderSmoke.LoadContent(contentManager);
+
+        // Sounds
+        m_engineSound = contentManager.Load<SoundEffect>("Audio/enginehum").CreateInstance();
+        m_engineSound.IsLooped = true;
+        m_engineSound.Pitch = -1.0f;
+        m_engineSound.Volume = 0.6f;
+        m_explosionSound = contentManager.Load<SoundEffect>("Audio/explosion").CreateInstance();
+        m_explosionSound.Pitch = -0.3f;
+        m_clappingSound = contentManager.Load<SoundEffect>("Audio/clapping").CreateInstance();
     }
 
     public override void Reload()
@@ -374,10 +395,16 @@ public class GamePlayView : GameStateView
                     m_lander.Destroyed = true;
 
             if (m_lander.Landed)
+            {
+                m_landerThrustApplied = false;
                 m_gameState = GamePlayState.Win;
-            if (m_lander.Destroyed)
+                m_clappingSound.Play();
+            }
+            else if (m_lander.Destroyed)
             {
                 m_gameState = GamePlayState.End;
+                m_landerThrustApplied = false;
+                m_explosionSound.Play();
 
                 m_particleSystemFire.ShipCrash(
                     5000,
@@ -394,38 +421,43 @@ public class GamePlayView : GameStateView
                     5500
                 );
             }
-
-            if (m_landerThrustApplied)
-            {
-
-                Line bottomLine = new(m_lander.Corners[2].ToVector2(), m_lander.Corners[3].ToVector2());
-                Vector2 thrustPoint = bottomLine.Split().Item1.End;
-
-                m_landerThrustTimer += elapsed;
-                m_particleSystemFire.ShipThrust(
-                    elapsed,
-                    thrustPoint,
-                    -m_lander.Direction,
-                    m_lander.ThrustAccel * 10000,
-                    ScaleNumber(1, MeasurementType.Value),
-                    15
-                );
-
-                m_particleSystemSmoke.ShipThrust(
-                    elapsed,
-                    thrustPoint,
-                    -m_lander.Direction,
-                    m_lander.ThrustAccel * 500,
-                    ScaleNumber(4, MeasurementType.Value),
-                    3000
-                );
-            }
-            else
-            {
-                m_landerThrustTimer -= 2 * elapsed;
-            }
-            m_landerThrustTimer = MathHelper.Clamp(m_landerThrustTimer, 0, 501);
         }
+
+        if (m_landerThrustApplied)
+        {
+
+            Line bottomLine = new(m_lander.Corners[2].ToVector2(), m_lander.Corners[3].ToVector2());
+            Vector2 thrustPoint = bottomLine.Split().Item1.End;
+
+            m_landerThrustTimer += elapsed;
+            m_particleSystemFire.ShipThrust(
+                elapsed,
+                thrustPoint,
+                -m_lander.Direction,
+                m_lander.ThrustAccel * 10000,
+                ScaleNumber(1, MeasurementType.Value),
+                15
+            );
+
+            m_particleSystemSmoke.ShipThrust(
+                elapsed,
+                thrustPoint,
+                -m_lander.Direction,
+                m_lander.ThrustAccel * 500,
+                ScaleNumber(4, MeasurementType.Value),
+                3000
+            );
+            m_engineSound.Play();
+        }
+        else
+        {
+            m_landerThrustTimer -= elapsed;
+        }
+
+        m_landerThrustTimer = MathHelper.Clamp(m_landerThrustTimer, 0, m_maxThrustTimer);
+        float volume = MathHelper.Lerp(0, m_landerThrustTimer, 0.5f) / m_maxThrustTimer;
+        m_engineSound.Volume = volume;
+        if (volume == 0) m_engineSound.Pause();
 
         // Moving FPS
         if (elapsed > 0)

@@ -12,7 +12,7 @@ public class SettingsView : GameStateView
 {
     private SpriteFont m_fontMenu;
     private SpriteFont m_fontMenuHover;
-    private InputMapper m_inputMapper;
+    private readonly InputMapper m_inputMapper;
 
     public SettingsView(InputMapper inputMapper)
     {
