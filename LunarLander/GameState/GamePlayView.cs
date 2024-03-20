@@ -8,7 +8,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace LunarLander;
 
@@ -112,7 +111,6 @@ public class GamePlayView : GameStateView
     {
         m_inputMapper = inputMapper;
         GRAV_ACCEL = GRAV_ACCELS[body];
-        SetScale(1);
     }
 
     public override void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics, IInputDevice m_inputDevice)
@@ -173,11 +171,12 @@ public class GamePlayView : GameStateView
         float landingZoneSize = m_lander.Width * 2;
         List<Line> zones = new();
         Vector2 prevEnd = new(0, m_terrainYLevel);
-        for (int i = 0; i < MAX_LANDING_ZONES; i++)
+        int numLandingZones = MAX_LANDING_ZONES - m_level + 1;
+        for (int i = 0; i < numLandingZones; i++)
         {
             // Segment possible landing zone areas into columns
-            float leftBound = m_bounds.Left + (i / (float)MAX_LANDING_ZONES * boundsWidth);
-            float rightBound = m_bounds.Right - ((MAX_LANDING_ZONES - i - 1) / (float)MAX_LANDING_ZONES * boundsWidth);
+            float leftBound = m_bounds.Left + (i / (float)numLandingZones * boundsWidth);
+            float rightBound = m_bounds.Right - ((numLandingZones - i - 1) / (float)numLandingZones* boundsWidth);
 
             // Get random starting point somewhere in its column
             Vector2 landingZoneStart = new(
@@ -311,6 +310,7 @@ public class GamePlayView : GameStateView
         m_particleSystemSmoke.Clear();
 
         m_lander = new();
+        SetScale(1.0f);
 
         NewLevel();
     }
@@ -320,11 +320,7 @@ public class GamePlayView : GameStateView
         m_level++;
         m_gameState = GamePlayState.Transition;
         m_transitionTimer = 3000;
-        SetScale(1f / m_level);
-
-        m_landerRect.Location = m_landerStartPosition.ToPoint();
-        m_landerRect.Width = m_lander.Width;
-        m_landerRect.Height = m_lander.Height;
+        ResetLander();
 
         BuildTerrain();
     }
@@ -334,14 +330,20 @@ public class GamePlayView : GameStateView
         m_srf = MathHelper.Clamp(0.40f / scale, 0.25f, 0.70f); // Dont get too sharp or too smooth
         PX_PER_METER = 5 * scale;
         m_gravity = new(0, ScaleNumber(GRAV_ACCEL, MeasurementType.Acceleration));
+        ResetLander();
+    }
 
-        if (m_lander == null) return;
-
+    private void ResetLander()
+    {
         int width = (int)ScaleNumber(9.4f, MeasurementType.Value);
         int height = (int)(width / m_landerAspectRatio);
         float landerAccel = ScaleNumber(15f, MeasurementType.Acceleration);
 
         m_lander.Set(m_landerStartPosition, m_landerStartOrientation, width, height, landerAccel);
+
+        m_landerRect.Location = m_landerStartPosition.ToPoint();
+        m_landerRect.Width = m_lander.Width;
+        m_landerRect.Height = m_lander.Height;
     }
 
     private enum MeasurementType
@@ -420,9 +422,12 @@ public class GamePlayView : GameStateView
             if (m_lander.Landed)
             {
                 m_inputDevice.UnregisterAll();
-                RegisterKeys();
+                RegisterKeys(); // Regregister enter key
                 m_landerThrustApplied = false;
-                m_gameState = GamePlayState.Win;
+                if (m_level == 2)
+                    m_gameState = GamePlayState.End;
+                else
+                    m_gameState = GamePlayState.Win;
                 m_clappingSound.Play();
             }
             else if (m_lander.Destroyed)
