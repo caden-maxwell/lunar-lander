@@ -1,4 +1,5 @@
 ﻿using LunarLander.Input;
+using LunarLander.Storage;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -32,6 +33,7 @@ public class LunarLanderGame : Game
     private IInputDevice m_inputDevice;
     private InputMapper m_inputMapper = new();
     private const GameStateEnum m_startState = GameStateEnum.MainMenu;
+    private readonly Database m_storage = new();
 
     public LunarLanderGame()
     {
@@ -76,6 +78,11 @@ public class LunarLanderGame : Game
     {
         foreach (var item in m_states)
             item.Value.LoadContent(this.Content);
+        m_storage.SaveSomething(new GameScore(123456, 3));
+        m_storage.SaveSomething(new GameScore(123456, 3));
+        m_storage.SaveSomething(new GameScore(123456, 3));
+        m_storage.SaveSomething(new GameScore(123456, 3));
+        m_storage.SaveSomething(new GameScore(123456, 3));
     }
 
     protected GameStateEnum ProcessInput(GameTime gameTime)
