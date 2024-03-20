@@ -1,6 +1,7 @@
 ﻿using LunarLander.Helpers;
 using LunarLander.Input;
 using LunarLander.Particle;
+using LunarLander.Storage;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
@@ -78,6 +79,7 @@ public class GamePlayView : GameStateView
         {5, (0.7f, 1, 1.10f) },
     };
 
+    private readonly Database m_storage;
     private readonly InputMapper m_inputMapper;
     private readonly RandomGen m_rand = new();
     private readonly int[] m_movingFPS = new int[50];
@@ -117,10 +119,11 @@ public class GamePlayView : GameStateView
     private bool m_isSafeSpeed = false;
     private bool m_isSafeAngle = false;
 
-    public GamePlayView(InputMapper inputMapper, SpaceBodiesEnum body)
+    public GamePlayView(InputMapper inputMapper, SpaceBodiesEnum body, Database storage)
     {
         m_inputMapper = inputMapper;
         GRAV_ACCEL = GRAV_ACCELS[body];
+        m_storage = storage;
     }
 
     public override void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics, IInputDevice m_inputDevice)
@@ -469,6 +472,8 @@ public class GamePlayView : GameStateView
                     ScaleNumber(5, MeasurementType.Value),
                     5500
                 );
+
+                m_storage.SaveScore(new(10000, (ushort)m_level));
             }
         }
 

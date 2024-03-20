@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Runtime.Serialization.Json;
@@ -10,8 +11,16 @@ public class Database
 {
     private bool m_saving = false;
     private bool m_loading = false;
+    private List<GameScore> m_loadedState = new();
+    public List<GameScore> Scores { get; private set; }
 
-    public void SaveSomething(GameScore score)
+    public Database()
+    {
+        LoadScores();
+        Scores = new(m_loadedState);
+    }
+
+    public void SaveScore(GameScore score)
     {
         lock (this)
         {
@@ -24,7 +33,7 @@ public class Database
         }
     }
 
-    private async Task FinalizeSaveAsync(GameScore state)
+    private async Task FinalizeSaveAsync(GameScore score)
     {
         await Task.Run(() =>
         {
@@ -35,8 +44,9 @@ public class Database
                     using IsolatedStorageFileStream fs = storage.OpenFile("HighScores.json", FileMode.Create);
                     if (fs != null)
                     {
-                        DataContractJsonSerializer mySerializer = new(typeof(GameScore));
-                        mySerializer.WriteObject(fs, state);
+                        m_loadedState.Add(score);
+                        DataContractJsonSerializer mySerializer = new(typeof(List<GameScore>));
+                        mySerializer.WriteObject(fs, m_loadedState);
                     }
                 }
                 catch (IsolatedStorageException)
@@ -52,7 +62,7 @@ public class Database
     /// <summary>
     /// Demonstrates how to deserialize an object from storage device
     /// </summary>
-    public void LoadSomething()
+    public void LoadScores()
     {
         lock (this)
         {
@@ -78,8 +88,8 @@ public class Database
                         using IsolatedStorageFileStream fs = storage.OpenFile("HighScores.json", FileMode.Open);
                         if (fs != null)
                         {
-                            DataContractJsonSerializer mySerializer = new(typeof(GameScore));
-                            //m_loadedState = (GameScore)mySerializer.ReadObject(fs);
+                            DataContractJsonSerializer mySerializer = new(typeof(List<GameScore>));
+                            m_loadedState = (List<GameScore>)mySerializer.ReadObject(fs);
                         }
                     }
                 }
