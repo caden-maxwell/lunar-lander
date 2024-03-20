@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 
@@ -12,20 +13,17 @@ namespace LunarLander;
 
 public class GamePlayView : GameStateView
 {
-    private SpriteFont m_font;
-    private SpriteFont m_fontBig;
+    public override GameStateEnum State { get; } = GameStateEnum.GamePlay;
+    public override GameStateEnum NextState { get; set; } = GameStateEnum.GamePlay;
+
+    // Terrain/World
     private BasicEffect m_effect;
     private RasterizerState m_rasterizerState;
-    private SpriteBatch m_particleSpriteBatch;
-
     private VertexPositionColor[] m_vertsTriStrip;
     private int[] m_indexTriStrip;
-    private readonly List<Line> m_lines = new();
-
-    private const float SCALE = 1.3f; // Simulation scale - higher values zoom in (make things bigger)
-    private readonly float m_srf = MathHelper.Clamp(0.55f / SCALE, 0.45f, 0.75f); // Surface roughness factor - higher is more rough
-    private readonly float m_terrainDetail = 5; // X distance between terrain vertices - higher is less detailed
-    private readonly float m_pctFromEdge = 0.15f; // Percent of screen that bounds are away from window edges
+    private float m_srf; // Surface roughness factor - higher is more rough
+    private const float TERRAIN_DETAIL = 10; // X distance between terrain vertices - higher is less detailed
+    private const float BOUNDS_PCT_FROM_EDGE = 0.15f; // Percent of screen that bounds are away from window edges
     private float m_terrainYLevel; // Starting y-level for terrain
     private struct Bounds
     {
@@ -34,84 +32,108 @@ public class GamePlayView : GameStateView
         public float Left;
         public float Right;
     };
-    private Bounds m_bounds; // Defines bounds for safety zones and top of terrain
-
-    private int m_level = 1;
-    private int m_numLandingZones = 2;
+    private Bounds m_bounds; // Defines bounds for landing zones and top of terrain
+    private readonly List<Line> m_lines = new();
+    private const int MAX_LANDING_ZONES = 2;
     private readonly List<Line> m_landingZones = new();
+    private float PX_PER_METER;
+    private readonly Vector2 GRAVITY; // Virtual-world vector in px/ms^2
+
+    // Gameplay
     private enum GamePlayState
     {
+        Waiting,
         Transition,
         Playing,
         Paused,
-        End,
-        Win
+        Lose,
+        Win,
+        End
     }
-
-    private readonly RandomGen m_rand = new();
+    private GamePlayState m_gameState;
+    private float m_transitionTimer;
+    private int m_level = 1;
     private readonly InputMapper m_inputMapper;
+    private readonly RandomGen m_rand = new();
+    private readonly int[] m_movingFPS = new int[50];
 
-    public override GameStateEnum State { get; } = GameStateEnum.GamePlay;
-    public override GameStateEnum NextState { get; set; } = GameStateEnum.GamePlay;
+    // Fonts
+    private SpriteFont m_font;
+    private SpriteFont m_fontBig;
 
-    private readonly Dictionary<SpaceBodiesEnum, float> m_gravAccels = new()
-    {
-        { SpaceBodiesEnum.Sun, 274},
-        { SpaceBodiesEnum.Mercury, 3.70f},
-        { SpaceBodiesEnum.Venus, 8.87f},
-        { SpaceBodiesEnum.Earth, 9.82f},
-        { SpaceBodiesEnum.Moon, 1.62f},
-        { SpaceBodiesEnum.Mars, 3.73f},
-        { SpaceBodiesEnum.Jupiter, 25.92f},
-        { SpaceBodiesEnum.Titan, 1.35f},
-        { SpaceBodiesEnum.Saturn, 11.19f},
-        { SpaceBodiesEnum.Uranus, 9.01f},
-        { SpaceBodiesEnum.Neptune, 11.27f},
-        { SpaceBodiesEnum.Pluto, 0.62f}
-    };
-    private const float PX_PER_METER = 4.28f * SCALE; // Approximate scale factor
-    private readonly float GRAV_ACCEL;
-    private Vector2 m_gravity;
-
+    // Textures
     private Texture2D m_backgroundTex;
     private Texture2D m_landerTex;
     private Rectangle m_landerRect = new();
-    private Rectangle m_rectSpriteSource = new();
-    private Lander m_lander;
+    private Rectangle m_landerRectSpriteSource = new();
+
+    // Particles
+    private SpriteBatch m_particleSpriteBatch; // Separate spritebatch for additive blending
     private ParticleSystem m_particleSystemFire;
     private ParticleSystemRenderer m_renderFire;
     private ParticleSystem m_particleSystemSmoke;
     private ParticleSystemRenderer m_renderSmoke;
 
+    // Sounds
     private SoundEffectInstance m_engineSound;
     private SoundEffectInstance m_explosionSound;
     private SoundEffectInstance m_clappingSound;
 
-    private const float LANDER_WIDTH = 9.4f * PX_PER_METER; // Meters wide 
-    private Vector2 m_landerStartOrientation = new(2, 1);
+    // Lander
+    private Lander m_lander;
+    private Vector2 m_landerStartOrientation = new(1, 0);
     private Vector2 m_landerStartPosition;
     private bool m_landerThrustApplied = false;
-    private float m_landerThrustTimer = 0;
-    private const float m_maxThrustTimer = 500; // ms
-    private const float m_safeLandingSpeed = 2; // m/s
-    private const float m_safeLandingAngle = 5; // Degrees
+    private float m_landerThrustTimer = 0; // Used to keep track of sound fade in/out and spritesheet
+    private const float MAX_THRUST_TIMER = 500; // ms
+    private const float SAFE_LANDING_SPEED = 2; // m/s
+    private const float SAFE_LANDING_ANGLE = 5; // Degrees
     private bool m_isSafeSpeed = false;
     private bool m_isSafeAngle = false;
-    private enum CollisionType
-    {
-        Terrain,
-        LandingZone,
-        None
-    }
-    private CollisionType m_collision = CollisionType.None;
-    private GamePlayState m_gameState = GamePlayState.Playing;
-    private readonly int[] m_movingFPS = new int[50];
 
     public GamePlayView(InputMapper inputMapper, SpaceBodiesEnum body)
     {
         m_inputMapper = inputMapper;
-        GRAV_ACCEL = m_gravAccels[body];
-        m_gravity = new(0, ScaleNumber(GRAV_ACCEL, MeasurementType.Acceleration));
+
+        SetScale(1);
+        Dictionary<SpaceBodiesEnum, float> GRAV_ACCELS = new()
+        {
+            { SpaceBodiesEnum.Sun, 274},
+            { SpaceBodiesEnum.Mercury, 3.70f},
+            { SpaceBodiesEnum.Venus, 8.87f},
+            { SpaceBodiesEnum.Earth, 9.82f},
+            { SpaceBodiesEnum.Moon, 1.62f},
+            { SpaceBodiesEnum.Mars, 3.73f},
+            { SpaceBodiesEnum.Jupiter, 25.92f},
+            { SpaceBodiesEnum.Titan, 1.35f},
+            { SpaceBodiesEnum.Saturn, 11.19f},
+            { SpaceBodiesEnum.Uranus, 9.01f},
+            { SpaceBodiesEnum.Neptune, 11.27f},
+            { SpaceBodiesEnum.Pluto, 0.62f}
+        };
+        GRAVITY = new(0, ScaleNumber(GRAV_ACCELS[body], MeasurementType.Acceleration));
+    }
+    public void SetScale(float scale)
+    {
+        m_srf = MathHelper.Clamp(0.40f / scale, 0.25f, 0.70f); // Dont get too sharp or too smooth
+        PX_PER_METER = 5 * scale;
+    }
+
+    private enum MeasurementType
+    {
+        Value,
+        Velocity,
+        Acceleration
+    }
+
+    /// <summary>
+    /// Convert to and from real- and virtual-world measurements
+    /// </summary>
+    private float ScaleNumber(float value, MeasurementType type, bool toVirtual = true)
+    {
+        if (!toVirtual)
+            return value / PX_PER_METER * (float)Math.Pow(1000, (int)type);
+        return value * PX_PER_METER / (float)Math.Pow(1000, (int)type);
     }
 
     public override void Initialize(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphics, IInputDevice m_inputDevice)
@@ -143,10 +165,10 @@ public class GamePlayView : GameStateView
 
         m_bounds = new Bounds()
         {
-            Top = (int)(m_graphics.PreferredBackBufferHeight * (m_pctFromEdge + 0.1f)),
-            Bottom = (int)(m_graphics.PreferredBackBufferHeight * (1 - m_pctFromEdge)),
-            Left = (int)(m_graphics.PreferredBackBufferWidth * m_pctFromEdge),
-            Right = (int)(m_graphics.PreferredBackBufferWidth * (1 - m_pctFromEdge))
+            Top = (int)(m_graphics.PreferredBackBufferHeight * (BOUNDS_PCT_FROM_EDGE + 0.1f)),
+            Bottom = (int)(m_graphics.PreferredBackBufferHeight * (1 - BOUNDS_PCT_FROM_EDGE)),
+            Left = (int)(m_graphics.PreferredBackBufferWidth * BOUNDS_PCT_FROM_EDGE),
+            Right = (int)(m_graphics.PreferredBackBufferWidth * (1 - BOUNDS_PCT_FROM_EDGE))
         };
 
         m_landerStartPosition = new Vector2(
@@ -159,6 +181,7 @@ public class GamePlayView : GameStateView
             m_landerStartOrientation,
             landerAccel
         );
+        m_lander.SetWidth((int)ScaleNumber(9.4f, MeasurementType.Value));
 
         m_particleSystemFire = new ParticleSystem(500);
         m_renderFire = new ParticleSystemRenderer("Images/fire");
@@ -167,26 +190,6 @@ public class GamePlayView : GameStateView
         m_renderSmoke = new ParticleSystemRenderer("Images/smoke");
 
         BuildTerrain();
-    }
-
-    private enum MeasurementType
-    {
-        Value,
-        Velocity,
-        Acceleration
-    }
-
-    /// <summary>
-    /// Convert to and from real- and virtual-world measurements
-    /// </summary>
-    /// <param name="value"></param>
-    /// <param name="type"></param>
-    /// <returns></returns>
-    private static float ScaleNumber(float value, MeasurementType type, bool toVirtual = true)
-    {
-        if (!toVirtual)
-            return value / PX_PER_METER * (float)Math.Pow(1000, (int)type);
-        return value * PX_PER_METER / (float)Math.Pow(1000, (int)type);
     }
 
     #region terrain
@@ -198,14 +201,14 @@ public class GamePlayView : GameStateView
 
         m_landingZones.Clear();
         float boundsWidth = m_bounds.Right - m_bounds.Left;
-        float landingZoneSize = LANDER_WIDTH * 2;
+        float landingZoneSize = m_lander.Width * 2;
         List<Line> zones = new();
         Vector2 prevEnd = new(0, m_terrainYLevel);
-        for (int i = 0; i < m_numLandingZones; i++)
+        for (int i = 0; i < MAX_LANDING_ZONES; i++)
         {
             // Segment possible landing zone areas into columns
-            float leftBound = m_bounds.Left + (i / (float)m_numLandingZones * boundsWidth);
-            float rightBound = m_bounds.Right - ((m_numLandingZones - i - 1) / (float)m_numLandingZones * boundsWidth);
+            float leftBound = m_bounds.Left + (i / (float)MAX_LANDING_ZONES * boundsWidth);
+            float rightBound = m_bounds.Right - ((MAX_LANDING_ZONES - i - 1) / (float)MAX_LANDING_ZONES * boundsWidth);
 
             // Get random starting point somewhere in its column
             Vector2 landingZoneStart = new(
@@ -282,7 +285,7 @@ public class GamePlayView : GameStateView
 
     private void RandMidpointDisplacement(Line line, List<Line> lines, RandomGen rand)
     {
-        if (line.DistX() <= m_terrainDetail)
+        if (line.DistX() <= TERRAIN_DETAIL)
         {
             lines.Add(line);
             return;
@@ -312,21 +315,12 @@ public class GamePlayView : GameStateView
         m_fontBig = contentManager.Load<SpriteFont>("Fonts/stats-big");
 
         // Textures
-        m_landerTex = contentManager.Load<Texture2D>("Images/lander");
         m_backgroundTex = contentManager.Load<Texture2D>("Images/gargantua");
+        m_landerTex = contentManager.Load<Texture2D>("Images/lander");
+        m_landerRectSpriteSource.Width = m_landerTex.Width / 3;
+        m_landerRectSpriteSource.Height = m_landerTex.Height;
 
-        m_rectSpriteSource.Width = m_landerTex.Width / 3;
-        m_rectSpriteSource.Height = m_landerTex.Height;
-
-        float aspectRatio = m_rectSpriteSource.Width / (float)m_rectSpriteSource.Height;
-
-        float LANDER_HEIGHT = LANDER_WIDTH / aspectRatio;
-        m_landerRect.Width = (int)(LANDER_WIDTH);
-        m_landerRect.Height = (int)(LANDER_HEIGHT);
-
-        m_lander.SetWidth(m_landerRect.Width);
-        m_lander.SetHeight(m_landerRect.Height);
-
+        // Particles
         m_renderFire.LoadContent(contentManager);
         m_renderSmoke.LoadContent(contentManager);
 
@@ -343,52 +337,70 @@ public class GamePlayView : GameStateView
     public override void Reload()
     {
         m_lander.Reset(m_landerStartPosition, m_landerStartOrientation);
+        m_landerRect.Location = m_landerStartPosition.ToPoint();
         BuildTerrain();
-        m_collision = CollisionType.None;
-        m_gameState = GamePlayState.Playing;
+        m_gameState = GamePlayState.Waiting;
         m_particleSystemFire.Clear();
         m_particleSystemSmoke.Clear();
+
+        float aspectRatio = m_landerRectSpriteSource.Width / (float)m_landerRectSpriteSource.Height;
+
+        m_lander.SetHeight((int)(m_lander.Width / aspectRatio));
+        m_landerRect.Width = m_lander.Width;
+        m_landerRect.Height = m_lander.Height;
     }
 
     public override void RegisterKeys()
     {
         base.RegisterKeys();
-
         m_inputDevice.RegisterCommand(
-            m_inputMapper.KeyboardMappings[ActionEnum.Thrust],
-            false,
-            new CommandDelegate(m_lander.Thrust)
-        );
-        m_inputDevice.RegisterCommand(
-            m_inputMapper.KeyboardMappings[ActionEnum.RotateClockwise],
-            false,
-            new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, true))
-        );
-        m_inputDevice.RegisterCommand(
-            m_inputMapper.KeyboardMappings[ActionEnum.RotateCounterClockwise],
-            false,
-            new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, false))
+            Keys.Enter,
+            true,
+            new CommandDelegate(EnterPressed)
         );
     }
 
     public override void Update(GameTime gameTime)
     {
         float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
+        if (m_gameState == GamePlayState.Transition)
+        {
+            m_transitionTimer -= elapsed;
+            if (m_transitionTimer < 0)
+            {
+                m_inputDevice.RegisterCommand(
+                    m_inputMapper.KeyboardMappings[ActionEnum.Thrust],
+                    false,
+                    new CommandDelegate(m_lander.Thrust)
+                );
+                m_inputDevice.RegisterCommand(
+                    m_inputMapper.KeyboardMappings[ActionEnum.RotateClockwise],
+                    false,
+                    new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, true))
+                );
+                m_inputDevice.RegisterCommand(
+                    m_inputMapper.KeyboardMappings[ActionEnum.RotateCounterClockwise],
+                    false,
+                    new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, false))
+                );
+                m_gameState = GamePlayState.Playing;
+            }
+        }
 
         if (m_gameState == GamePlayState.Playing)
         {
-            m_lander.Velocity += m_gravity * elapsed;
+            m_lander.Velocity += GRAVITY * elapsed;
             m_landerRect.Location = m_lander.Position.ToPoint();
             m_landerThrustApplied = m_lander.UsingThrust;
             m_lander.Update(gameTime);
 
-            m_collision = CollisionDetector();
-            if (m_collision == CollisionType.Terrain)
+            CollisionType collision = CollisionDetector();
+            if (collision == CollisionType.Terrain)
                 m_lander.Destroyed = true;
 
-            m_isSafeAngle = MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)) < m_safeLandingAngle;
-            m_isSafeSpeed = ScaleNumber(m_lander.Speed, MeasurementType.Velocity, false) < m_safeLandingSpeed;
-            if (m_collision == CollisionType.LandingZone)
+            m_isSafeAngle = MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)) < SAFE_LANDING_ANGLE;
+            m_isSafeSpeed = ScaleNumber(m_lander.Speed, MeasurementType.Velocity, false) < SAFE_LANDING_SPEED;
+            if (collision == CollisionType.LandingZone)
                 if (m_isSafeSpeed && m_isSafeAngle)
                     m_lander.Landed = true;
                 else
@@ -399,10 +411,11 @@ public class GamePlayView : GameStateView
                 m_landerThrustApplied = false;
                 m_gameState = GamePlayState.Win;
                 m_clappingSound.Play();
+                m_level++;
             }
             else if (m_lander.Destroyed)
             {
-                m_gameState = GamePlayState.End;
+                m_gameState = GamePlayState.Lose;
                 m_landerThrustApplied = false;
                 m_explosionSound.Play();
 
@@ -454,8 +467,8 @@ public class GamePlayView : GameStateView
             m_landerThrustTimer -= elapsed;
         }
 
-        m_landerThrustTimer = MathHelper.Clamp(m_landerThrustTimer, 0, m_maxThrustTimer);
-        float volume = MathHelper.Lerp(0, m_landerThrustTimer, 0.5f) / m_maxThrustTimer;
+        m_landerThrustTimer = MathHelper.Clamp(m_landerThrustTimer, 0, MAX_THRUST_TIMER);
+        float volume = MathHelper.Lerp(0, m_landerThrustTimer, 0.5f) / MAX_THRUST_TIMER;
         m_engineSound.Volume = volume;
         if (volume == 0) m_engineSound.Pause();
 
@@ -469,6 +482,13 @@ public class GamePlayView : GameStateView
 
         m_particleSystemFire.Update(gameTime);
         m_particleSystemSmoke.Update(gameTime);
+    }
+
+    private enum CollisionType
+    {
+        Terrain,
+        LandingZone,
+        None
     }
 
     private CollisionType CollisionDetector()
@@ -489,6 +509,15 @@ public class GamePlayView : GameStateView
                         return CollisionType.Terrain;
 
         return collision;
+    }
+
+    private void EnterPressed(GameTime gameTime, float value)
+    {
+        if (m_gameState == GamePlayState.Waiting || m_gameState == GamePlayState.Win)
+        {
+            m_gameState = GamePlayState.Transition;
+            m_transitionTimer = 3000;
+        }
     }
 
     public override void Render(GameTime gameTime)
@@ -524,19 +553,19 @@ public class GamePlayView : GameStateView
 
         m_spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        m_rectSpriteSource.X = 0;
+        m_landerRectSpriteSource.X = 0;
         if (m_landerThrustTimer > 250)
-            m_rectSpriteSource.X = m_rectSpriteSource.Width * 2;
+            m_landerRectSpriteSource.X = m_landerRectSpriteSource.Width * 2;
         else if (m_landerThrustTimer > 0)
-            m_rectSpriteSource.X = m_rectSpriteSource.Width;
+            m_landerRectSpriteSource.X = m_landerRectSpriteSource.Width;
 
         m_spriteBatch.Draw(
             m_landerTex,
             m_landerRect,
-            m_rectSpriteSource,
+            m_landerRectSpriteSource,
             m_lander.Destroyed ? Color.Transparent : Color.White,
             m_lander.AngleYAxis,
-            new Vector2(m_rectSpriteSource.Width / 2, m_rectSpriteSource.Height / 2),
+            new Vector2(m_landerRectSpriteSource.Width / 2, m_landerRectSpriteSource.Height / 2),
             SpriteEffects.None,
             0
         );
@@ -619,6 +648,18 @@ public class GamePlayView : GameStateView
             fuel > 0 ? Color.LightGreen : Color.White
         );
 
+        text = $"LEVEL {m_level}";
+        stringSize = m_fontBig.MeasureString(text);
+        textX = m_graphics.PreferredBackBufferWidth * 0.5f - (stringSize.X / 2);
+        textY = m_graphics.PreferredBackBufferHeight * 0.01f;
+
+        m_spriteBatch.DrawString(
+            m_fontBig,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+
         float sum = 0;
         foreach (float num in m_movingFPS)
             sum += num;
@@ -641,11 +682,13 @@ public class GamePlayView : GameStateView
 
         text = m_gameState switch
         {
-            GamePlayState.Win => "HOORAYYYY!!!!! :)",
-            GamePlayState.End => "MISSION FAILED :(",
+            GamePlayState.Waiting => "PRESS ENTER TO PLAY",
+            GamePlayState.Transition => $"{(int)m_transitionTimer / 1000 + 1}",
             GamePlayState.Playing => "",
-            GamePlayState.Transition => throw new NotImplementedException(),
             GamePlayState.Paused => throw new NotImplementedException(),
+            GamePlayState.Win => "MISSION SUCCESS\nPRESS ENTER TO PLAY NEXT LEVEL",
+            GamePlayState.Lose => "MISSION FAILED",
+            GamePlayState.End => "End. :)",
             _ => throw new NotImplementedException(),
         };
 
