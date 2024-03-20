@@ -156,20 +156,24 @@ public class SettingsView : GameStateView
 
     private void NextInput(Keys key)
     {
-        switch (m_currentSelection)
+        List<Keys> unallowed = new() { Keys.Escape, Keys.Enter };
+        if (!unallowed.Contains(key))
         {
-            case MenuState.Thrust:
-                m_inputMapper.SetThrust(key);
-                break;
-            case MenuState.RotateClockwise:
-                m_inputMapper.SetRotateClockwise(key);
-                break;
-            case MenuState.RotateCounterClockwise:
-                m_inputMapper.SetRotateCounterClockwise(key);
-                break;
-            case MenuState.Back:
-            default:
-                throw new NotImplementedException($"This menu does not support configuring: {m_currentSelection}");
+            switch (m_currentSelection)
+            {
+                case MenuState.Thrust:
+                    m_inputMapper.SetThrust(key);
+                    break;
+                case MenuState.RotateClockwise:
+                    m_inputMapper.SetRotateClockwise(key);
+                    break;
+                case MenuState.RotateCounterClockwise:
+                    m_inputMapper.SetRotateCounterClockwise(key);
+                    break;
+                case MenuState.Back:
+                default:
+                    throw new NotImplementedException($"This menu does not support configuring: {m_currentSelection}");
+            }
         }
         m_signalAwaitingEnded = true;
     }
