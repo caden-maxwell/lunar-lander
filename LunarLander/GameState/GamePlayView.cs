@@ -73,9 +73,9 @@ public class GamePlayView : GameStateView
     {
         {1, (1.3f, 2, 2.50f) },
         {2, (1.1f, 1, 1.75f) },
-        {3, (1.1f, 2, 1.25f) },
-        {4, (1.1f, 2, 1.25f) },
-        {5, (1.1f, 1, 1.05f) },
+        {3, (1.0f, 2, 1.25f) },
+        {4, (0.9f, 2, 1.25f) },
+        {5, (0.7f, 1, 1.10f) },
     };
 
     private readonly InputMapper m_inputMapper;
