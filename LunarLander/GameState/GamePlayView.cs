@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace LunarLander;
 
@@ -68,6 +69,15 @@ public class GamePlayView : GameStateView
     private GamePlayState m_gameState;
     private float m_transitionTimer = 3000;
     private int m_level;
+    private readonly Dictionary<int, (float, int, float)> m_levels = new() // <levelID, (Map scale, number landing zones, size of landing zone with respect to lander width)>
+    {
+        {1, (1.3f, 2, 2.50f) },
+        {2, (1.1f, 1, 1.75f) },
+        {3, (1.1f, 2, 1.25f) },
+        {4, (1.1f, 2, 1.25f) },
+        {5, (1.1f, 1, 1.05f) },
+    };
+
     private readonly InputMapper m_inputMapper;
     private readonly RandomGen m_rand = new();
     private readonly int[] m_movingFPS = new int[50];
@@ -168,10 +178,10 @@ public class GamePlayView : GameStateView
 
         m_landingZones.Clear();
         float boundsWidth = m_bounds.Right - m_bounds.Left;
-        float landingZoneSize = m_lander.Width * 2;
+        float landingZoneSize = m_lander.Width * m_levels[m_level].Item3;
         List<Line> zones = new();
         Vector2 prevEnd = new(0, m_terrainYLevel);
-        int numLandingZones = MAX_LANDING_ZONES - m_level + 1;
+        int numLandingZones = m_levels[m_level].Item2;
         for (int i = 0; i < numLandingZones; i++)
         {
             // Segment possible landing zone areas into columns
@@ -320,7 +330,7 @@ public class GamePlayView : GameStateView
         m_level++;
         m_gameState = GamePlayState.Transition;
         m_transitionTimer = 3000;
-        ResetLander();
+        SetScale(m_levels[m_level].Item1);
 
         BuildTerrain();
     }
@@ -411,20 +421,27 @@ public class GamePlayView : GameStateView
 
             CollisionType collision = CollisionDetector();
             if (collision == CollisionType.Terrain)
+            {
                 m_lander.Destroyed = true;
+                Debug.WriteLine("Terrain");
+            }
 
             if (collision == CollisionType.LandingZone)
                 if (m_isSafeSpeed && m_isSafeAngle)
                     m_lander.Landed = true;
                 else
+                {
+                    Debug.WriteLine(ScaleNumber(m_lander.Speed, MeasurementType.Velocity, false));
+                    Debug.WriteLine(MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)));
                     m_lander.Destroyed = true;
+                }
 
             if (m_lander.Landed)
             {
                 m_inputDevice.UnregisterAll();
                 RegisterKeys(); // Regregister enter key
                 m_landerThrustApplied = false;
-                if (m_level == 2)
+                if (m_level == m_levels.Count)
                     m_gameState = GamePlayState.End;
                 else
                     m_gameState = GamePlayState.Win;
@@ -534,6 +551,8 @@ public class GamePlayView : GameStateView
     {
         if (m_gameState == GamePlayState.Win)
             NewLevel();
+        if (m_gameState == GamePlayState.Lose)
+            Reload();
     }
 
     public override void Render(GameTime gameTime)
