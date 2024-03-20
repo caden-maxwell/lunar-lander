@@ -541,26 +541,13 @@ public class GamePlayView : GameStateView
             0
         );
 
-        float x = ScaleNumber(m_lander.Velocity.X, MeasurementType.Velocity, false);
-        float y = ScaleNumber(-m_lander.Velocity.Y, MeasurementType.Velocity, false);
-        string text = $"Horizontal Velocity:{x,7:0.00} m/s\nVertical Velocity: {y,7:0.00} m/s";
         float textX = m_graphics.PreferredBackBufferWidth * 0.01f;
         float textY = textX;
-        Vector2 stringSize = m_font.MeasureString(text);
-        m_spriteBatch.DrawString(
-            m_font,
-            text,
-            new Vector2(textX, textY),
-            Color.White
-        );
-        textY += stringSize.Y + 10;
-
-
         float speed = ScaleNumber(m_lander.Speed, MeasurementType.Velocity, false);
-        text = $"Speed:";
+        string text = $"Speed:";
         textX = m_graphics.PreferredBackBufferWidth * 0.01f;
 
-        stringSize = m_font.MeasureString(text);
+        Vector2 stringSize = m_font.MeasureString(text);
         m_spriteBatch.DrawString(
             m_font,
             text,
@@ -608,6 +595,28 @@ public class GamePlayView : GameStateView
             text,
             new Vector2(textX, textY),
             m_isSafeAngle ? Color.LightGreen : Color.White
+        );
+
+        textX = m_graphics.PreferredBackBufferWidth * 0.01f;
+        textY += stringSize.Y + 10;
+
+        text = $"Fuel:";
+        stringSize = m_font.MeasureString(text);
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            Color.White
+        );
+        textX += stringSize.X;
+
+        float fuel = m_lander.Fuel;
+        text = $"{fuel,7:0.00}%";
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
+            new Vector2(textX, textY),
+            fuel > 0 ? Color.LightGreen : Color.White
         );
 
         float sum = 0;
@@ -709,8 +718,10 @@ public class GamePlayView : GameStateView
         ///  Angle with respect to Y-axis 
         /// </summary>
         public float AngleYAxis { get { return LunarMath.DirectionToAngle(new Vector2(-Direction.Y, Direction.X)); } }
+        public float Fuel { get; private set; }
+        private float m_fuelRate;
 
-        public bool UsingThrust { get; set; }
+        public bool UsingThrust { get; private set; }
         public bool Destroyed { get; set; }
         public bool Landed { get; set; }
 
@@ -719,13 +730,12 @@ public class GamePlayView : GameStateView
             Reset(initialPosition, initialDirection);
             AngVelocity = 0;
             ThrustAccel = thrustAccel; // px/ms^2
+            Fuel = 100;
+            m_fuelRate = thrustAccel * 250; // Fuel usage is an arbitrary function of thrust (in fuel/ms)
         }
 
         public void Update(GameTime gameTime)
         {
-            if (Destroyed || Landed)
-                return;
-
             float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             Position += Velocity * elapsed;
             Direction = LunarMath.AngleToDirection(AngleXAxis + AngVelocity * elapsed);
@@ -734,13 +744,15 @@ public class GamePlayView : GameStateView
 
         public void Thrust(GameTime gameTime, float value)
         {
-            if (Destroyed || Landed)
+            if (Destroyed || Landed || Fuel == 0)
                 return;
 
             float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             Velocity += ThrustAccel * Direction * elapsed;
             AngVelocity -= AngVelocity * 0.001f * elapsed;
             UsingThrust = true;
+            Fuel -= m_fuelRate * elapsed;
+            Fuel = Fuel < 0 ? 0 : Fuel;
         }
 
         public void Rotate(GameTime gameTime, float value, bool clockwise)
@@ -774,6 +786,7 @@ public class GamePlayView : GameStateView
             AngVelocity = 0;
             direction.Y = -direction.Y;
             Direction = Vector2.Normalize(direction);
+            Fuel = 100;
         }
     }
 }
