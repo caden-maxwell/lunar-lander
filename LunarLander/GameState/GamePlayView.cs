@@ -320,7 +320,11 @@ public class GamePlayView : GameStateView
         m_level++;
         m_gameState = GamePlayState.Transition;
         m_transitionTimer = 3000;
-        SetScale(m_level);
+        SetScale(1f / m_level);
+
+        m_landerRect.Location = m_landerStartPosition.ToPoint();
+        m_landerRect.Width = m_lander.Width;
+        m_landerRect.Height = m_lander.Height;
 
         BuildTerrain();
     }
@@ -337,12 +341,7 @@ public class GamePlayView : GameStateView
         int height = (int)(width / m_landerAspectRatio);
         float landerAccel = ScaleNumber(15f, MeasurementType.Acceleration);
 
-        m_lander.Reset(m_landerStartPosition, m_landerStartOrientation, width, height, landerAccel);
-
-        m_landerRect.Location = m_landerStartPosition.ToPoint();
-        m_landerRect.Width = m_lander.Width;
-        m_landerRect.Height = m_lander.Height;
-
+        m_lander.Set(m_landerStartPosition, m_landerStartOrientation, width, height, landerAccel);
     }
 
     private enum MeasurementType
@@ -735,7 +734,8 @@ public class GamePlayView : GameStateView
                 float halfWidth = Width / 2;
                 float halfHeight = Height / 2;
 
-                // Needed to swap top and bottom since Y-axis is inverted: https://stackoverflow.com/questions/41898990/find-corners-of-a-rotated-rectangle-given-its-center-point-and-rotation
+                // https://stackoverflow.com/questions/41898990/find-corners-of-a-rotated-rectangle-given-its-center-point-and-rotation
+                // - Needed to swap top and bottom since Y-axis is inverted
                 bl.X = (int)(Position.X - ((halfWidth) * Math.Cos(angle)) - ((halfHeight - Height * 0.1f) * Math.Sin(angle)));
                 bl.Y = (int)(Position.Y - ((halfWidth) * Math.Sin(angle)) + ((halfHeight - Height * 0.1f) * Math.Cos(angle)));
 
@@ -789,6 +789,8 @@ public class GamePlayView : GameStateView
 
         public void Thrust(GameTime gameTime, float value)
         {
+            if (Fuel == 0) return;
+
             float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             Velocity += ThrustAccel * Direction * elapsed;
             AngVelocity -= AngVelocity * 0.001f * elapsed;
@@ -807,7 +809,7 @@ public class GamePlayView : GameStateView
                 AngVelocity -= changeVel;
         }
 
-        public void Reset(Vector2 position, Vector2 direction, int width, int height, float thrustAccel)
+        public void Set(Vector2 position, Vector2 direction, int width, int height, float thrustAccel)
         {
             Destroyed = false;
             Landed = false;
@@ -817,6 +819,7 @@ public class GamePlayView : GameStateView
             direction.Y = -direction.Y;
             Direction = Vector2.Normalize(direction);
             Fuel = 100;
+            m_fuelRate = thrustAccel * 300; // Arbitrary
             Width = width;
             Height = height;
             ThrustAccel = thrustAccel;
