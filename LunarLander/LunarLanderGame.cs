@@ -56,8 +56,8 @@ public class LunarLanderGame : Game
         m_states = new Dictionary<GameStateEnum, IGameState>
         {
             { GameStateEnum.MainMenu, new MainMenuView() },
-            { GameStateEnum.GamePlay, new GamePlayView(m_inputMapper, SpaceBodiesEnum.Moon) },
-            { GameStateEnum.HighScores, new HighScoresView() },
+            { GameStateEnum.GamePlay, new GamePlayView(m_inputMapper, SpaceBodiesEnum.Moon, m_storage) },
+            { GameStateEnum.HighScores, new HighScoresView(m_storage) },
             { GameStateEnum.Credits, new CreditsView() },
             { GameStateEnum.Settings, new SettingsView(m_inputMapper) }
         };
@@ -78,11 +78,6 @@ public class LunarLanderGame : Game
     {
         foreach (var item in m_states)
             item.Value.LoadContent(this.Content);
-        m_storage.SaveSomething(new GameScore(123456, 3));
-        m_storage.SaveSomething(new GameScore(123456, 3));
-        m_storage.SaveSomething(new GameScore(123456, 3));
-        m_storage.SaveSomething(new GameScore(123456, 3));
-        m_storage.SaveSomething(new GameScore(123456, 3));
     }
 
     protected GameStateEnum ProcessInput(GameTime gameTime)
