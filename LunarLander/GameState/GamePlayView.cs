@@ -9,7 +9,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace LunarLander;
 
@@ -22,7 +21,9 @@ public class GamePlayView : GameStateView
     private BasicEffect m_effect;
     private RasterizerState m_rasterizerState;
     private VertexPositionColor[] m_vertsTriStrip;
+    private VertexPositionColor[] m_vertsTriStripOutline;
     private int[] m_indexTriStrip;
+    private int[] m_indexTriStripOutline;
     private float m_srf; // Surface roughness factor - higher is more rough
     private const float TERRAIN_DETAIL = 10; // X distance between terrain vertices - higher is less detailed
     private const float BOUNDS_PCT_FROM_EDGE = 0.15f; // Percent of screen that bounds are away from window edges
@@ -227,6 +228,8 @@ public class GamePlayView : GameStateView
         // Create an array for each of the unique vertices
         m_vertsTriStrip = new VertexPositionColor[2 * m_lines.Count];
         m_indexTriStrip = new int[2 * m_lines.Count];
+        m_vertsTriStripOutline = new VertexPositionColor[2 * m_lines.Count];
+        m_indexTriStripOutline = new int[2 * m_lines.Count];
 
         int lineIdx;
         float x;
@@ -246,6 +249,15 @@ public class GamePlayView : GameStateView
 
             m_indexTriStrip[2 * lineIdx] = 2 * lineIdx;
             m_indexTriStrip[2 * lineIdx + 1] = 2 * lineIdx + 1;
+
+            m_vertsTriStripOutline[2 * lineIdx].Position = new(x, y, 0);
+            m_vertsTriStripOutline[2 * lineIdx + 1].Position = new(x, y - 3, 0);
+
+            m_vertsTriStripOutline[2 * lineIdx].Color = Color.White;
+            m_vertsTriStripOutline[2 * lineIdx + 1].Color = Color.White;
+
+            m_indexTriStripOutline[2 * lineIdx] = 2 * lineIdx;
+            m_indexTriStripOutline[2 * lineIdx + 1] = 2 * lineIdx + 1;
         }
         lineIdx--;
 
@@ -260,6 +272,15 @@ public class GamePlayView : GameStateView
 
         m_indexTriStrip[2 * lineIdx] = 2 * lineIdx;
         m_indexTriStrip[2 * lineIdx + 1] = 2 * lineIdx + 1;
+
+        m_vertsTriStripOutline[2 * lineIdx].Position = new(x, y, 0);
+        m_vertsTriStripOutline[2 * lineIdx + 1].Position = new(x, y - 3, 0);
+
+        m_vertsTriStripOutline[2 * lineIdx].Color = Color.White;
+        m_vertsTriStripOutline[2 * lineIdx + 1].Color = Color.White;
+
+        m_indexTriStripOutline[2 * lineIdx] = 2 * lineIdx;
+        m_indexTriStripOutline[2 * lineIdx + 1] = 2 * lineIdx + 1;
     }
 
     private void RandMidpointDisplacement(Line line, List<Line> lines, RandomGen rand)
@@ -591,6 +612,16 @@ public class GamePlayView : GameStateView
                 0,
                 m_vertsTriStrip.Length,
                 m_indexTriStrip,
+                0,
+                2 * (m_lines.Count - 1)
+            );
+
+            m_graphics.GraphicsDevice.DrawUserIndexedPrimitives(
+                PrimitiveType.TriangleStrip,
+                m_vertsTriStripOutline,
+                0,
+                m_vertsTriStripOutline.Length,
+                m_indexTriStripOutline,
                 0,
                 2 * (m_lines.Count - 1)
             );
