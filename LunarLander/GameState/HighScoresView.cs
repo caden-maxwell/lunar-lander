@@ -62,12 +62,18 @@ public class HighScoresView : GameStateView
         string text = "HIGH SCORES";
         Vector2 stringSize = m_fontBig.MeasureString(text);
         float textX = m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2;
-        float textY = m_graphics.PreferredBackBufferHeight * 0.05f;
+        float textY = m_graphics.PreferredBackBufferHeight * 0.10f;
+        m_spriteBatch.DrawString(
+            m_fontBig,
+            text,
+            new Vector2(textX + 3, textY + 3),
+            Color.Black
+        );
         m_spriteBatch.DrawString(
             m_fontBig,
             text,
             new Vector2(textX, textY),
-            Color.Yellow
+            Color.White
         );
         textY += stringSize.Y;
 
@@ -77,8 +83,14 @@ public class HighScoresView : GameStateView
         m_spriteBatch.DrawString(
             m_font,
             text,
+            new Vector2(textX + 3, textY + 3),
+            Color.Black
+        );
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
             new Vector2(textX, textY),
-            Color.Yellow
+            Color.White
         );
         textY += stringSize.Y + 50;
 
@@ -91,14 +103,20 @@ public class HighScoresView : GameStateView
                 score = m_storage.Scores[m_page][i];
                 text = $"{score.Name} | {score.Score:0.00}";
             }
-            
+
             stringSize = m_font.MeasureString(text);
             textX = m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2;
             m_spriteBatch.DrawString(
                 m_font,
                 text,
+                new Vector2(textX + 3, textY + 3),
+                Color.Black
+            );
+            m_spriteBatch.DrawString(
+                m_font,
+                text,
                 new Vector2(textX, textY),
-                Color.Yellow
+                Color.White
             );
             textY += stringSize.Y;
         }
@@ -115,8 +133,14 @@ public class HighScoresView : GameStateView
         m_spriteBatch.DrawString(
             m_font,
             text,
+            new Vector2(textX + 3, textY + 3),
+            Color.Black
+        );
+        m_spriteBatch.DrawString(
+            m_font,
+            text,
             new Vector2(textX, textY),
-            Color.Yellow
+            Color.White
         );
 
         m_spriteBatch.End();

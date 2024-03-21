@@ -1,8 +1,6 @@
-﻿using LunarLander.Input;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 
 namespace LunarLander;
 
@@ -26,8 +24,20 @@ public class CreditsView : GameStateView
         m_spriteBatch.Begin();
 
         Vector2 stringSize = m_font.MeasureString(MESSAGE);
-        m_spriteBatch.DrawString(m_font, MESSAGE,
-            new Vector2(m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2, m_graphics.PreferredBackBufferHeight / 2 - stringSize.Y), Color.Yellow);
+        float textX = m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2;
+        float textY = m_graphics.PreferredBackBufferHeight / 2 - stringSize.Y;
+        m_spriteBatch.DrawString(
+            m_font,
+            MESSAGE,
+            new Vector2(textX + 3, textY + 3),
+            Color.Black
+        );
+        m_spriteBatch.DrawString(
+            m_font,
+            MESSAGE,
+            new Vector2(textX, textY),
+            Color.White
+        );
 
         m_spriteBatch.End();
     }

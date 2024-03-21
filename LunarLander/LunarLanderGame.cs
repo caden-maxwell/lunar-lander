@@ -31,7 +31,6 @@ public class LunarLanderGame : Game
     private IGameState m_currentState;
     private Dictionary<GameStateEnum, IGameState> m_states;
     private IInputDevice m_inputDevice;
-    private InputMapper m_inputMapper = new();
     private const GameStateEnum m_startState = GameStateEnum.MainMenu;
     private readonly Database m_storage = new();
 
@@ -54,10 +53,10 @@ public class LunarLanderGame : Game
         m_states = new Dictionary<GameStateEnum, IGameState>
         {
             { GameStateEnum.MainMenu, new MainMenuView() },
-            { GameStateEnum.GamePlay, new GamePlayView(m_inputMapper, SpaceBodiesEnum.Moon, m_storage) },
+            { GameStateEnum.GamePlay, new GamePlayView(m_storage, SpaceBodiesEnum.Moon) },
             { GameStateEnum.HighScores, new HighScoresView(m_storage) },
             { GameStateEnum.Credits, new CreditsView() },
-            { GameStateEnum.Settings, new SettingsView(m_inputMapper) }
+            { GameStateEnum.Settings, new SettingsView(m_storage) }
         };
 
         // Init each game state
@@ -111,7 +110,7 @@ public class LunarLanderGame : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
+        GraphicsDevice.Clear(Color.Gray);
 
         m_currentState.Render(gameTime);
 
