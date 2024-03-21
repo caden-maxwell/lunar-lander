@@ -11,29 +11,39 @@ public class Database
 {
     private bool m_saving = false;
     private bool m_loading = false;
-    private List<GameScore> m_loadedState = new();
-    public List<GameScore> Scores { get; private set; }
+    private Dictionary<int, List<GameScore>> m_loadedState = new();
+    public Dictionary<int, List<GameScore>> Scores
+    {
+        get
+        {
+            for (int i = 1; i <= 5; i++)
+                m_loadedState[i].Sort();
+            return m_loadedState;
+        }
+    }
 
     public Database()
     {
         LoadScores();
-        Scores = new(m_loadedState);
+        for (int i = 1; i <= 5; i++)
+            if (!m_loadedState.ContainsKey(i))
+                m_loadedState.Add(i, new());
     }
 
-    public void SaveScore(GameScore score)
+    public void SaveScore(int level, GameScore score)
     {
         lock (this)
         {
             if (!m_saving)
             {
                 m_saving = true;
-                var result = FinalizeSaveAsync(score);
+                var result = FinalizeSaveAsync(level, score);
                 result.Wait();
             }
         }
     }
 
-    private async Task FinalizeSaveAsync(GameScore score)
+    private async Task FinalizeSaveAsync(int level, GameScore score)
     {
         await Task.Run(() =>
         {
@@ -44,8 +54,8 @@ public class Database
                     using IsolatedStorageFileStream fs = storage.OpenFile("HighScores.json", FileMode.Create);
                     if (fs != null)
                     {
-                        m_loadedState.Add(score);
-                        DataContractJsonSerializer mySerializer = new(typeof(List<GameScore>));
+                        m_loadedState[level].Add(score);
+                        DataContractJsonSerializer mySerializer = new(typeof(Dictionary<int, List<GameScore>>));
                         mySerializer.WriteObject(fs, m_loadedState);
                     }
                 }
@@ -88,8 +98,8 @@ public class Database
                         using IsolatedStorageFileStream fs = storage.OpenFile("HighScores.json", FileMode.Open);
                         if (fs != null)
                         {
-                            DataContractJsonSerializer mySerializer = new(typeof(List<GameScore>));
-                            m_loadedState = (List<GameScore>)mySerializer.ReadObject(fs);
+                            DataContractJsonSerializer mySerializer = new(typeof(Dictionary<int, List<GameScore>>));
+                            m_loadedState = (Dictionary<int, List<GameScore>>)mySerializer.ReadObject(fs);
                         }
                     }
                 }

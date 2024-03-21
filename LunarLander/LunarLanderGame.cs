@@ -47,11 +47,9 @@ public class LunarLanderGame : Game
     {
         m_graphics.PreferredBackBufferWidth = 1600;
         m_graphics.PreferredBackBufferHeight = 900;
-        //m_graphics.SynchronizeWithVerticalRetrace = false; // Uncomment for truly uncapped framerate
-
         m_graphics.ApplyChanges();
 
-        m_inputDevice = new KeyboardInput(); // This line could ideally be any input
+        m_inputDevice = new KeyboardInput();
 
         m_states = new Dictionary<GameStateEnum, IGameState>
         {
@@ -66,7 +64,6 @@ public class LunarLanderGame : Game
         foreach (var item in m_states)
             item.Value.Initialize(this.GraphicsDevice, m_graphics, m_inputDevice);
 
-        // Start with game play state for debugging purposes
         m_currentState = m_states[m_startState];
         m_prevState = m_currentState;
         m_currentState.RegisterKeys();
