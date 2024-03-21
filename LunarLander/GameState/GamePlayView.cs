@@ -189,7 +189,7 @@ public class GamePlayView : GameStateView
         {
             // Segment possible landing zone areas into columns
             float leftBound = m_bounds.Left + (i / (float)numLandingZones * boundsWidth);
-            float rightBound = m_bounds.Right - ((numLandingZones - i - 1) / (float)numLandingZones* boundsWidth);
+            float rightBound = m_bounds.Right - ((numLandingZones - i - 1) / (float)numLandingZones * boundsWidth);
 
             // Get random starting point somewhere in its column
             Vector2 landingZoneStart = new(
@@ -424,20 +424,13 @@ public class GamePlayView : GameStateView
 
             CollisionType collision = CollisionDetector();
             if (collision == CollisionType.Terrain)
-            {
                 m_lander.Destroyed = true;
-                Debug.WriteLine("Terrain");
-            }
 
             if (collision == CollisionType.LandingZone)
                 if (m_isSafeSpeed && m_isSafeAngle)
                     m_lander.Landed = true;
                 else
-                {
-                    Debug.WriteLine(ScaleNumber(m_lander.Speed, MeasurementType.Velocity, false));
-                    Debug.WriteLine(MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)));
                     m_lander.Destroyed = true;
-                }
 
             if (m_lander.Landed)
             {
@@ -449,6 +442,16 @@ public class GamePlayView : GameStateView
                 else
                     m_gameState = GamePlayState.Win;
                 m_clappingSound.Play();
+
+                float speedPct = 1 - ScaleNumber(m_lander.Speed, MeasurementType.Velocity, false) / SAFE_LANDING_SPEED;
+                float anglePct = 1 - MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)) / SAFE_LANDING_ANGLE;
+                float fuelPct = m_lander.Fuel / 100f;
+                Debug.WriteLine(speedPct);
+                Debug.WriteLine(anglePct);
+                Debug.WriteLine(fuelPct);
+                float score = (speedPct * 3 / 8) + (anglePct * 4 / 8) + (fuelPct / 8);
+                score *= 100;
+                m_storage.SaveScore(m_level, new(score));
             }
             else if (m_lander.Destroyed)
             {
@@ -472,8 +475,6 @@ public class GamePlayView : GameStateView
                     ScaleNumber(5, MeasurementType.Value),
                     5500
                 );
-
-                m_storage.SaveScore(new(10000, (ushort)m_level));
             }
         }
 
@@ -511,7 +512,8 @@ public class GamePlayView : GameStateView
         m_landerThrustTimer = MathHelper.Clamp(m_landerThrustTimer, 0, MAX_THRUST_TIMER);
         float volume = MathHelper.Lerp(0, m_landerThrustTimer, 0.5f) / MAX_THRUST_TIMER;
         m_engineSound.Volume = volume;
-        if (volume == 0) m_engineSound.Pause();
+        if (volume == 0)
+            m_engineSound.Pause();
 
         // Moving FPS
         if (elapsed > 0)
@@ -818,7 +820,8 @@ public class GamePlayView : GameStateView
 
         public void Thrust(GameTime gameTime, float value)
         {
-            if (Fuel == 0) return;
+            if (Fuel == 0)
+                return;
 
             float elapsed = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             Velocity += ThrustAccel * Direction * elapsed;
