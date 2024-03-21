@@ -1,4 +1,5 @@
 ﻿using LunarLander.Input;
+using LunarLander.Storage;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -12,11 +13,11 @@ public class SettingsView : GameStateView
 {
     private SpriteFont m_fontMenu;
     private SpriteFont m_fontMenuHover;
-    private readonly InputMapper m_inputMapper;
+    private readonly Database m_storage;
 
-    public SettingsView(InputMapper inputMapper)
+    public SettingsView(Database storage)
     {
-        m_inputMapper = inputMapper;
+        m_storage = storage;
     }
 
     public override GameStateEnum State { get; } = GameStateEnum.Settings;
@@ -76,9 +77,9 @@ public class SettingsView : GameStateView
 
         Dictionary<string, MenuState> keyValuePairs = new()
         {
-            { $"Thrust: {m_inputMapper.KeyboardMappings[ActionEnum.Thrust]}", MenuState.Thrust },
-            { $"Rotate Clockwise: {m_inputMapper.KeyboardMappings[ActionEnum.RotateClockwise]}", MenuState.RotateClockwise},
-            { $"Rotate Counterclockwise: {m_inputMapper.KeyboardMappings[ActionEnum.RotateCounterClockwise]}", MenuState.RotateCounterClockwise },
+            { $"Thrust: {m_storage.Actions[ActionEnum.Thrust]}", MenuState.Thrust },
+            { $"Rotate Clockwise: {m_storage.Actions[ActionEnum.RotateClockwise]}", MenuState.RotateClockwise},
+            { $"Rotate Counterclockwise: {m_storage.Actions[ActionEnum.RotateCounterClockwise]}", MenuState.RotateCounterClockwise },
             { "Back to Main Menu", MenuState.Back},
         };
 
@@ -106,17 +107,18 @@ public class SettingsView : GameStateView
     private float DrawMenuItem(SpriteFont font, string text, float y, Color color)
     {
         Vector2 stringSize = font.MeasureString(text);
+        float textX = m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2;
         m_spriteBatch.DrawString(
             font,
             text,
-            new Vector2(m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2 + 2, y + 2),
+            new Vector2(textX + 3, y + 3),
             Color.Black
         );
 
         m_spriteBatch.DrawString(
             font,
             text,
-            new Vector2(m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2, y),
+            new Vector2(textX, y),
             color
         );
 
@@ -162,13 +164,13 @@ public class SettingsView : GameStateView
             switch (m_currentSelection)
             {
                 case MenuState.Thrust:
-                    m_inputMapper.SetThrust(key);
+                    m_storage.SaveAction(ActionEnum.Thrust, key);
                     break;
                 case MenuState.RotateClockwise:
-                    m_inputMapper.SetRotateClockwise(key);
+                    m_storage.SaveAction(ActionEnum.RotateClockwise, key);
                     break;
                 case MenuState.RotateCounterClockwise:
-                    m_inputMapper.SetRotateCounterClockwise(key);
+                    m_storage.SaveAction(ActionEnum.RotateCounterClockwise, key);
                     break;
                 case MenuState.Back:
                 default:

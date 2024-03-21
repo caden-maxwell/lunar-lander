@@ -31,7 +31,7 @@ public class ParticleSystem
         float gaussianAngle;
         for (int i = 0; i < numParticles; ++i)
         {
-            gaussianAngle = (float)m_random.NextGaussian(angle, MathHelper.PiOver4 / 8);
+            gaussianAngle = (float)m_random.NextGaussian(angle, MathHelper.PiOver4 / 4);
             gaussianSize = (float)(size * m_random.NextGaussian(1, 0.5f));
             Particle particle = new(
                 center,

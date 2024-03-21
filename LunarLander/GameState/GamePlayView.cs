@@ -80,7 +80,6 @@ public class GamePlayView : GameStateView
     };
 
     private readonly Database m_storage;
-    private readonly InputMapper m_inputMapper;
     private readonly RandomGen m_rand = new();
     private readonly int[] m_movingFPS = new int[50];
 
@@ -119,9 +118,8 @@ public class GamePlayView : GameStateView
     private bool m_isSafeSpeed = false;
     private bool m_isSafeAngle = false;
 
-    public GamePlayView(InputMapper inputMapper, SpaceBodiesEnum body, Database storage)
+    public GamePlayView(Database storage, SpaceBodiesEnum body)
     {
-        m_inputMapper = inputMapper;
         GRAV_ACCEL = GRAV_ACCELS[body];
         m_storage = storage;
     }
@@ -233,8 +231,8 @@ public class GamePlayView : GameStateView
         int lineIdx;
         float x;
         float y;
-        Color topColor = Color.DarkOrange;
-        Color bottomColor = Color.DarkRed;
+        Color topColor = Color.Gray;
+        Color bottomColor = new(0x3f, 0x3f, 0x3f);
         for (lineIdx = 0; lineIdx < m_lines.Count; lineIdx++)
         {
             x = m_lines[lineIdx].Start.X;
@@ -296,7 +294,7 @@ public class GamePlayView : GameStateView
         m_fontBig = contentManager.Load<SpriteFont>("Fonts/stats-big");
 
         // Textures
-        m_backgroundTex = contentManager.Load<Texture2D>("Images/gargantua");
+        m_backgroundTex = contentManager.Load<Texture2D>("Images/starry");
         m_landerTex = contentManager.Load<Texture2D>("Images/lander");
         m_landerRectSpriteSource.Width = m_landerTex.Width / 3;
         m_landerRectSpriteSource.Height = m_landerTex.Height;
@@ -319,9 +317,6 @@ public class GamePlayView : GameStateView
     public override void Reload()
     {
         m_level = 0;
-        m_particleSystemFire.Clear();
-        m_particleSystemSmoke.Clear();
-
         m_lander = new();
         SetScale(1.0f);
 
@@ -330,9 +325,14 @@ public class GamePlayView : GameStateView
 
     private void NewLevel()
     {
+        m_particleSystemFire.Clear();
+        m_particleSystemSmoke.Clear();
+
         m_level++;
         m_gameState = GamePlayState.Transition;
         m_transitionTimer = 3000;
+        if (m_level == 1)
+            m_transitionTimer = 0;
         SetScale(m_levels[m_level].Item1);
 
         BuildTerrain();
@@ -395,17 +395,17 @@ public class GamePlayView : GameStateView
             if (m_transitionTimer < 0)
             {
                 m_inputDevice.RegisterCommand(
-                    m_inputMapper.KeyboardMappings[ActionEnum.Thrust],
+                    m_storage.Actions[ActionEnum.Thrust],
                     false,
                     new CommandDelegate(m_lander.Thrust)
                 );
                 m_inputDevice.RegisterCommand(
-                    m_inputMapper.KeyboardMappings[ActionEnum.RotateClockwise],
+                    m_storage.Actions[ActionEnum.RotateClockwise],
                     false,
                     new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, true))
                 );
                 m_inputDevice.RegisterCommand(
-                    m_inputMapper.KeyboardMappings[ActionEnum.RotateCounterClockwise],
+                    m_storage.Actions[ActionEnum.RotateCounterClockwise],
                     false,
                     new CommandDelegate((gameTime, value) => m_lander.Rotate(gameTime, value, false))
                 );
@@ -446,9 +446,6 @@ public class GamePlayView : GameStateView
                 float speedPct = 1 - ScaleNumber(m_lander.Speed, MeasurementType.Velocity, false) / SAFE_LANDING_SPEED;
                 float anglePct = 1 - MathHelper.ToDegrees(Math.Abs(m_lander.AngleYAxis)) / SAFE_LANDING_ANGLE;
                 float fuelPct = m_lander.Fuel / 100f;
-                Debug.WriteLine(speedPct);
-                Debug.WriteLine(anglePct);
-                Debug.WriteLine(fuelPct);
                 float score = (speedPct * 3 / 8) + (anglePct * 4 / 8) + (fuelPct / 8);
                 score *= 100;
                 m_storage.SaveScore(m_level, new(score));
@@ -560,6 +557,12 @@ public class GamePlayView : GameStateView
             NewLevel();
         if (m_gameState == GamePlayState.Lose)
             Reload();
+    }
+
+    public override void EscPressed(GameTime gameTime, float value)
+    {
+        m_landerThrustTimer = 0; // Stops audio from continuing on menu change
+        base.EscPressed(gameTime, value);
     }
 
     public override void Render(GameTime gameTime)
@@ -698,6 +701,12 @@ public class GamePlayView : GameStateView
         m_spriteBatch.DrawString(
             m_fontBig,
             text,
+            new Vector2(textX + 3, textY + 3),
+            Color.Black
+        );
+        m_spriteBatch.DrawString(
+            m_fontBig,
+            text,
             new Vector2(textX, textY),
             Color.White
         );
@@ -707,7 +716,7 @@ public class GamePlayView : GameStateView
             sum += num;
         float fps = sum / m_movingFPS.Length;
 
-        text = $"FPS: {fps,7:0.}";
+        text = $"FPS: {fps,5:0.}";
         stringSize = m_font.MeasureString(text);
         textX = (int)(m_graphics.PreferredBackBufferWidth * 0.99) - stringSize.X;
         textY = m_graphics.PreferredBackBufferHeight * 0.01f;
@@ -718,6 +727,12 @@ public class GamePlayView : GameStateView
             new Vector2(textX, textY),
             Color.White
         );
+        m_spriteBatch.End();
+
+        m_renderFire.Render(m_particleSpriteBatch, m_particleSystemFire);
+        m_renderSmoke.Render(m_particleSpriteBatch, m_particleSystemSmoke);
+
+        m_spriteBatch.Begin();
 
         textX = m_graphics.PreferredBackBufferWidth * 0.50f;
         textY = m_graphics.PreferredBackBufferHeight * 0.50f;
@@ -728,24 +743,30 @@ public class GamePlayView : GameStateView
             GamePlayState.Playing => "",
             GamePlayState.Paused => throw new NotImplementedException(),
             GamePlayState.Win => "MISSION SUCCESS\nPRESS ENTER TO PLAY NEXT LEVEL",
-            GamePlayState.Lose => "MISSION FAILED",
+            GamePlayState.Lose => "MISSION FAILED\nPRESS ENTER TO TRY AGAIN",
             GamePlayState.End => "End. :)",
             _ => throw new NotImplementedException(),
         };
 
-        stringSize = m_fontBig.MeasureString(text);
-        m_spriteBatch.DrawString(
-            m_fontBig,
-            text,
-            new Vector2(textX - (stringSize.X / 2), textY),
-            Color.White
-        );
-
+        foreach (string line in text.Split("\n"))
+        {
+            stringSize = m_fontBig.MeasureString(line);
+            m_spriteBatch.DrawString(
+                m_fontBig,
+                line,
+                new Vector2(textX - (stringSize.X / 2) + 3, textY + 3),
+                Color.Black
+            );
+            m_spriteBatch.DrawString(
+                m_fontBig,
+                line,
+                new Vector2(textX - (stringSize.X / 2), textY),
+                Color.White
+            );
+            textY += stringSize.Y;
+        }
 
         m_spriteBatch.End();
-
-        m_renderFire.Render(m_particleSpriteBatch, m_particleSystemFire);
-        m_renderSmoke.Render(m_particleSpriteBatch, m_particleSystemSmoke);
     }
 
     private class Lander

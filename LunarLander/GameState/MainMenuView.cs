@@ -12,6 +12,9 @@ public class MainMenuView : GameStateView
 {
     private SpriteFont m_fontMenu;
     private SpriteFont m_fontMenuHover;
+    private Texture2D m_blankTex;
+    private Texture2D m_backgroundTex;
+    private Rectangle m_rect = new();
 
     public override GameStateEnum State { get; } = GameStateEnum.MainMenu;
     public override GameStateEnum NextState { get; set; } = GameStateEnum.MainMenu;
@@ -42,6 +45,9 @@ public class MainMenuView : GameStateView
     {
         m_fontMenu = contentManager.Load<SpriteFont>("Fonts/menu");
         m_fontMenuHover = contentManager.Load<SpriteFont>("Fonts/menu-hover");
+
+        m_blankTex = contentManager.Load<Texture2D>("Images/blank");
+        m_backgroundTex = contentManager.Load<Texture2D>("Images/starry");
     }
 
     public override void Update(GameTime gameTime) { }
@@ -50,7 +56,45 @@ public class MainMenuView : GameStateView
     {
         m_spriteBatch.Begin();
 
-        Dictionary<string, MenuState> keyValuePairs = new Dictionary<string, MenuState>()
+        m_rect.Location = new(0, 0);
+        m_rect.Size = new(m_graphics.PreferredBackBufferWidth, m_graphics.PreferredBackBufferHeight);
+        m_spriteBatch.Draw(
+            m_backgroundTex,
+            m_rect,
+            null,
+            Color.White,
+            0,
+            Vector2.Zero,
+            SpriteEffects.None,
+            0
+        );
+
+        m_rect.Location = new((int)(m_graphics.PreferredBackBufferWidth * 0.5f) - 295, (int)(m_graphics.PreferredBackBufferHeight * 0.3f) - 95);
+        m_rect.Size = new(600, 500);
+        m_spriteBatch.Draw(
+            m_blankTex,
+            m_rect,
+            null,
+            Color.Black,
+            0,
+            Vector2.Zero,
+            SpriteEffects.None,
+            0
+        );
+        m_rect.X -= 5;
+        m_rect.Y -= 5;
+        m_spriteBatch.Draw(
+            m_blankTex,
+            m_rect,
+            null,
+            Color.Gray,
+            0,
+            Vector2.Zero,
+            SpriteEffects.None,
+            0
+        );
+
+        Dictionary<string, MenuState> keyValuePairs = new()
         {
             { "New Game", MenuState.NewGame },
             { "High Scores", MenuState.HighScores },
@@ -76,17 +120,18 @@ public class MainMenuView : GameStateView
     private float DrawMenuItem(SpriteFont font, string text, float y, Color color)
     {
         Vector2 stringSize = font.MeasureString(text);
+        float textX = m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2;
         m_spriteBatch.DrawString(
             font,
             text,
-            new Vector2(m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2 + 2, y + 2),
+            new Vector2(textX + 3, y + 3),
             Color.Black
         );
 
         m_spriteBatch.DrawString(
             font,
             text,
-            new Vector2(m_graphics.PreferredBackBufferWidth / 2 - stringSize.X / 2, y),
+            new Vector2(textX, y),
             color
         );
 
