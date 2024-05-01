@@ -13,3 +13,4 @@ The lander is only safe if *both* of these conditions are met:
 
 Otherwise...
 
+![Explosion!!!](crash.png)
