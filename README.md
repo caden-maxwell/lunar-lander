@@ -1,2 +1,2 @@
-# CS5410 Project 3: Lunar Lander
+# CS5410 Game Development - Project 3: Lunar Lander
 
