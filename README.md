@@ -1,5 +1,5 @@
 # Lunar Lander
-Project for CS5410 - Game Development
+*Project for CS5410 - Game Development*
 
 ## Gameplay
 
